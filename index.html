@@ -495,6 +495,30 @@ function startLoaderCycle(){
 }
 function stopLoaderCycle(){clearInterval(loaderTimer);}
 
+async function extractTextFromPDF(file){
+  return new Promise(function(resolve,reject){
+    var script=document.createElement('script');
+    script.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload=async function(){
+      try{
+        pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        var arrayBuffer=await file.arrayBuffer();
+        var pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+        var fullText='';
+        for(var i=1;i<=pdf.numPages;i++){
+          var page=await pdf.getPage(i);
+          var tc=await page.getTextContent();
+          var pageText=tc.items.map(function(it){return it.str;}).join(' ');
+          fullText+='--- PÁGINA '+i+' ---\n'+pageText+'\n';
+        }
+        resolve(fullText);
+      }catch(err){reject(err);}
+    };
+    script.onerror=function(){reject(new Error('Falha ao carregar PDF.js'));};
+    document.head.appendChild(script);
+  });
+}
+
 async function analyzeFile(){
   if(!currentFile)return;
   loading.classList.add('show');
@@ -503,62 +527,9 @@ async function analyzeFile(){
   startLoaderCycle();
 
   try{
-    var base64=await toBase64(currentFile);
-    var prompt=`Você é um especialista em faturamento hospitalar e OPME (Órteses, Próteses e Materiais Especiais).
+    var textoExtraido=await extractTextFromPDF(currentFile);
 
-Analise este Mapa Cirúrgico em PDF e retorne APENAS um JSON válido (sem texto, sem markdown, sem blocos de código) seguindo exatamente esta estrutura:
-
-{
-  "data_cirurgia": "DD/MM/AAAA",
-  "total_procedimentos": número,
-  "total_com_opme": número,
-  "total_sem_opme": número,
-  "pacientes": [
-    {
-      "nome": "PACIENTE 1",
-      "idade": "ex: 47a",
-      "sexo": "M ou F",
-      "convenio": "nome do convênio",
-      "medico": "MÉDICO RESPONSÁVEL",
-      "sala": "SALA X",
-      "horario": "HH:MM – HH:MM",
-      "procedimentos": [
-        {
-          "codigo": "código AMB ou TUSS",
-          "nome": "nome completo do procedimento",
-          "qtd_solic": número,
-          "qtd_aut": número ou null,
-          "principal": true ou false
-        }
-      ],
-      "opme": [
-        {
-          "nome": "nome do material/implante",
-          "ref": "referência se disponível ou null",
-          "fornecedor": "nome ou null",
-          "qtd_sol": número,
-          "qtd_aut": número ou null,
-          "status": "PENDENTE" ou "AUTORIZADO" ou "PARTICULAR"
-        }
-      ],
-      "tem_opme": true ou false,
-      "cti": false,
-      "internado": false,
-      "observacoes": "observações clínicas relevantes ou null"
-    }
-  ]
-}
-
-Regras CRÍTICAS de privacidade — OBRIGATÓRIAS:
-- NUNCA use o nome real do paciente — use sempre "PACIENTE 1", "PACIENTE 2", etc.
-- NUNCA use o nome real do médico — use sempre "MÉDICO RESPONSÁVEL"
-- NUNCA inclua CPF, telefone, matrícula, data de nascimento ou qualquer dado pessoal
-- Se houver "OPME PENDENTE" como nome, mantenha e marque status como "PENDENTE"
-- Materiais particulares (não pelo convênio) marquem status como "PARTICULAR"
-- Se o campo qtd_aut não estiver disponível, use null
-- Inclua TODOS os pacientes do mapa, com ou sem OPME
-- Se não houver OPME, retorne "opme": [] e "tem_opme": false
-- Retorne SOMENTE o JSON, nada mais`;
+    var prompt='Você é um especialista em faturamento hospitalar e OPME (Órteses, Próteses e Materiais Especiais).\n\nAnalise o texto abaixo extraído de um Mapa Cirúrgico e retorne APENAS um JSON válido (sem texto, sem markdown, sem blocos de código) seguindo exatamente esta estrutura:\n\n{\n  "data_cirurgia": "DD/MM/AAAA",\n  "total_procedimentos": número,\n  "total_com_opme": número,\n  "total_sem_opme": número,\n  "pacientes": [\n    {\n      "nome": "PACIENTE 1",\n      "idade": "ex: 47a",\n      "sexo": "M ou F",\n      "convenio": "nome do convênio",\n      "medico": "MÉDICO RESPONSÁVEL",\n      "sala": "SALA X",\n      "horario": "HH:MM – HH:MM",\n      "procedimentos": [\n        {\n          "codigo": "código AMB ou TUSS",\n          "nome": "nome completo do procedimento",\n          "qtd_solic": número,\n          "qtd_aut": número ou null,\n          "principal": true ou false\n        }\n      ],\n      "opme": [\n        {\n          "nome": "nome do material/implante",\n          "ref": "referência se disponível ou null",\n          "fornecedor": "nome ou null",\n          "qtd_sol": número,\n          "qtd_aut": número ou null,\n          "status": "PENDENTE" ou "AUTORIZADO" ou "PARTICULAR"\n        }\n      ],\n      "tem_opme": true ou false,\n      "cti": false,\n      "internado": false,\n      "observacoes": "observações clínicas relevantes ou null"\n    }\n  ]\n}\n\nRegras CRÍTICAS de privacidade — OBRIGATÓRIAS:\n- NUNCA use o nome real do paciente — use sempre "PACIENTE 1", "PACIENTE 2", etc.\n- NUNCA use o nome real do médico — use sempre "MÉDICO RESPONSÁVEL"\n- NUNCA inclua CPF, telefone, matrícula, data de nascimento ou qualquer dado pessoal\n- Se houver "OPME PENDENTE" como nome, mantenha e marque status como "PENDENTE"\n- Materiais particulares (não pelo convênio) marquem status como "PARTICULAR"\n- Se o campo qtd_aut não estiver disponível, use null\n- Inclua TODOS os pacientes do mapa, com ou sem OPME\n- Se não houver OPME, retorne "opme": [] e "tem_opme": false\n- Retorne SOMENTE o JSON, nada mais\n\nTEXTO DO MAPA CIRÚRGICO:\n'+textoExtraido;
 
     var response=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent('https://api.anthropic.com/v1/messages'),{
       method:'POST',
@@ -566,10 +537,7 @@ Regras CRÍTICAS de privacidade — OBRIGATÓRIAS:
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:4000,
-        messages:[{role:'user',content:[
-          {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
-          {type:'text',text:prompt}
-        ]}]
+        messages:[{role:'user',content:prompt}]
       })
     });
     var data=await response.json();
