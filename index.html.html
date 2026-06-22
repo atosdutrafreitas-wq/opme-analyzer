@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OPME Analyzer — Hospital Regina</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+:root{
+  --bg:#050814;
+  --surface:rgba(255,255,255,0.04);
+  --surface2:rgba(255,255,255,0.08);
+  --border:rgba(255,255,255,0.08);
+  --border2:rgba(255,255,255,0.15);
+  --accent:#6C63FF;
+  --accent2:#00D4AA;
+  --accent3:#FF6B6B;
+  --text:#F0F0FF;
+  --text2:rgba(240,240,255,0.55);
+  --text3:rgba(240,240,255,0.3);
+  --glow:rgba(108,99,255,0.35);
+  --glow2:rgba(0,212,170,0.25);
+}
+
+body{
+  background:var(--bg);
+  font-family:'Inter',sans-serif;
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── CANVAS PARTÍCULAS ── */
+#canvas-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+
+/* ── ORBS FLUTUANTES ── */
+.orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:0.18;pointer-events:none;z-index:0;animation:orbFloat 12s ease-in-out infinite;}
+.orb1{width:500px;height:500px;background:var(--accent);top:-150px;left:-100px;animation-delay:0s;}
+.orb2{width:400px;height:400px;background:var(--accent2);bottom:-100px;right:-80px;animation-delay:-5s;}
+.orb3{width:300px;height:300px;background:#FF6B9D;top:40%;left:60%;animation-delay:-9s;}
+
+@keyframes orbFloat{
+  0%,100%{transform:translate(0,0) scale(1);}
+  33%{transform:translate(30px,-40px) scale(1.08);}
+  66%{transform:translate(-20px,25px) scale(0.95);}
+}
+
+/* ── LAYOUT ── */
+.app{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:40px 24px 80px;}
+
+/* ── HEADER ── */
+.header{text-align:center;margin-bottom:56px;}
+.header-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(108,99,255,0.12);border:1px solid rgba(108,99,255,0.3);
+  padding:6px 16px;border-radius:100px;font-size:11px;letter-spacing:2px;
+  text-transform:uppercase;color:var(--accent);margin-bottom:24px;
+  animation:badgePulse 3s ease-in-out infinite;
+}
+.header-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:dotBlink 1.5s ease-in-out infinite;}
+@keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(108,99,255,0.2);}50%{box-shadow:0 0 0 8px rgba(108,99,255,0);}}
+@keyframes dotBlink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+
+h1{
+  font-size:clamp(32px,6vw,56px);font-weight:700;line-height:1.1;
+  background:linear-gradient(135deg,#fff 0%,rgba(108,99,255,0.9) 50%,#00D4AA 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:16px;
+}
+.header-sub{font-size:15px;color:var(--text2);font-weight:300;line-height:1.6;}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{
+  position:relative;border:1.5px dashed rgba(108,99,255,0.4);border-radius:20px;
+  padding:56px 40px;text-align:center;cursor:pointer;
+  background:var(--surface);
+  transition:all 0.4s cubic-bezier(0.23,1,0.32,1);
+  overflow:hidden;margin-bottom:32px;
+}
+.upload-zone::before{
+  content:'';position:absolute;inset:0;border-radius:20px;
+  background:radial-gradient(ellipse at 50% 0%,rgba(108,99,255,0.08) 0%,transparent 70%);
+  opacity:0;transition:opacity 0.4s;pointer-events:none;
+}
+.upload-zone:hover{border-color:rgba(108,99,255,0.8);background:rgba(108,99,255,0.06);transform:translateY(-2px);}
+.upload-zone:hover::before{opacity:1;}
+.upload-zone.drag-over{border-color:var(--accent2);background:rgba(0,212,170,0.06);transform:scale(1.01);}
+.upload-zone.drag-over::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(0,212,170,0.1) 0%,transparent 70%);}
+
+.upload-icon{
+  width:72px;height:72px;margin:0 auto 20px;
+  background:linear-gradient(135deg,rgba(108,99,255,0.2),rgba(0,212,170,0.1));
+  border:1px solid rgba(108,99,255,0.3);border-radius:18px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:30px;animation:iconFloat 4s ease-in-out infinite;
+  position:relative;overflow:hidden;
+}
+.upload-icon::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(108,99,255,0.3),transparent);
+  animation:shimmer 2.5s linear infinite;
+}
+@keyframes iconFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+@keyframes shimmer{0%{transform:translateX(-100%) rotate(45deg);}100%{transform:translateX(200%) rotate(45deg);}}
+
+.upload-title{font-size:17px;font-weight:600;margin-bottom:6px;color:var(--text);}
+.upload-sub{font-size:13px;color:var(--text2);}
+.upload-hint{
+  display:inline-block;margin-top:16px;font-size:11px;letter-spacing:1px;
+  text-transform:uppercase;color:var(--text3);
+  background:var(--surface2);border:1px solid var(--border);
+  padding:4px 14px;border-radius:100px;
+}
+input[type=file]{display:none;}
+
+/* ── BTN ── */
+.btn{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 32px;border-radius:12px;border:none;cursor:pointer;
+  font-family:'Inter',sans-serif;font-size:14px;font-weight:600;
+  letter-spacing:0.3px;transition:all 0.3s cubic-bezier(0.23,1,0.32,1);
+  position:relative;overflow:hidden;
+}
+.btn::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent);
+  opacity:0;transition:opacity 0.3s;
+}
+.btn:hover::before{opacity:1;}
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent),#8B5CF6);
+  color:white;box-shadow:0 0 30px rgba(108,99,255,0.4);
+}
+.btn-primary:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 50px rgba(108,99,255,0.6);}
+.btn-primary:active{transform:scale(0.98);}
+.btn-secondary{
+  background:var(--surface2);color:var(--text2);
+  border:1px solid var(--border2);
+}
+.btn-secondary:hover{background:var(--surface);color:var(--text);transform:translateY(-1px);}
+
+.action-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;}
+
+/* ── LOADING ── */
+.loading{display:none;text-align:center;padding:60px 20px;}
+.loading.show{display:block;}
+.loader-ring{
+  width:64px;height:64px;margin:0 auto 24px;position:relative;
+}
+.loader-ring::before,.loader-ring::after{
+  content:'';position:absolute;inset:0;border-radius:50%;
+  border:2px solid transparent;
+}
+.loader-ring::before{
+  border-top-color:var(--accent);border-right-color:var(--accent);
+  animation:spin 1.2s linear infinite;
+}
+.loader-ring::after{
+  border-bottom-color:var(--accent2);border-left-color:var(--accent2);
+  animation:spin 1.2s linear infinite reverse;inset:6px;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loader-text{font-size:14px;color:var(--text2);}
+.loader-dots span{animation:dotJump 1.4s ease-in-out infinite;}
+.loader-dots span:nth-child(2){animation-delay:.2s;}
+.loader-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes dotJump{0%,80%,100%{transform:translateY(0);opacity:0.3;}40%{transform:translateY(-6px);opacity:1;}}
+
+/* ── RESUMO STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:20px;position:relative;overflow:hidden;
+  animation:cardIn 0.5s cubic-bezier(0.23,1,0.32,1) both;
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+}
+.stat-number{font-size:32px;font-weight:700;line-height:1;margin-bottom:4px;}
+.stat-label{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);}
+.stat-card.accent .stat-number{color:var(--accent);}
+.stat-card.success .stat-number{color:var(--accent2);}
+.stat-card.warning .stat-number{color:#FFB347;}
+.stat-card.danger .stat-number{color:var(--accent3);}
+
+/* ── RESULTADO ── */
+.results-section{display:none;}
+.results-section.show{display:block;}
+.section-label{
+  font-size:11px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--text3);margin-bottom:16px;display:flex;align-items:center;gap:12px;
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* ── CARD PACIENTE ── */
+.patient-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  margin-bottom:16px;overflow:hidden;
+  animation:cardIn 0.6s cubic-bezier(0.23,1,0.32,1) both;
+  transition:border-color 0.3s,transform 0.3s,box-shadow 0.3s;
+}
+.patient-card:hover{
+  border-color:rgba(108,99,255,0.4);transform:translateY(-2px);
+  box-shadow:0 8px 40px rgba(108,99,255,0.15);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+.card-header{
+  padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;
+  gap:16px;border-bottom:1px solid var(--border);cursor:pointer;
+  position:relative;overflow:hidden;
+}
+.card-header::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:linear-gradient(180deg,var(--accent),var(--accent2));
+}
+.patient-info{flex:1;padding-left:8px;}
+.patient-name{font-size:16px;font-weight:600;margin-bottom:4px;color:var(--text);}
+.patient-meta{font-size:12px;color:var(--text2);display:flex;flex-wrap:wrap;gap:8px;}
+.meta-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--surface2);border:1px solid var(--border);
+  padding:2px 10px;border-radius:100px;font-size:11px;
+}
+.badge-opme{
+  background:linear-gradient(135deg,rgba(255,107,107,0.2),rgba(255,107,107,0.1));
+  border:1px solid rgba(255,107,107,0.4);color:#FF9494;
+  padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;
+  letter-spacing:0.5px;white-space:nowrap;
+  animation:badgeGlow 2s ease-in-out infinite;
+}
+@keyframes badgeGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0.2);}50%{box-shadow:0 0 8px 2px rgba(255,107,107,0.15);}}
+
+.badge-ok{
+  background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.3);color:#00D4AA;
+  padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.5px;
+}
+.badge-pending{
+  background:rgba(255,179,71,0.1);border:1px solid rgba(255,179,71,0.3);color:#FFB347;
+  padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.5px;
+}
+.chevron{
+  font-size:18px;color:var(--text3);transition:transform 0.3s cubic-bezier(0.23,1,0.32,1);
+  flex-shrink:0;margin-top:2px;
+}
+.patient-card.open .chevron{transform:rotate(180deg);}
+
+/* ── CARD BODY ── */
+.card-body{max-height:0;overflow:hidden;transition:max-height 0.5s cubic-bezier(0.23,1,0.32,1);}
+.patient-card.open .card-body{max-height:800px;}
+.card-body-inner{padding:20px 24px 24px;}
+
+.proc-item{
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 16px;margin-bottom:8px;font-size:13px;
+}
+.proc-code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:4px;}
+.proc-name{color:var(--text);font-weight:500;margin-bottom:2px;}
+.proc-qty{font-size:11px;color:var(--text3);}
+
+.opme-list{margin-top:16px;}
+.opme-title{
+  font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent3);
+  margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.opme-title::before{content:'⚠';font-style:normal;}
+.opme-item{
+  display:flex;align-items:flex-start;gap:10px;
+  background:rgba(255,107,107,0.06);border:1px solid rgba(255,107,107,0.2);
+  border-radius:8px;padding:10px 14px;margin-bottom:6px;
+}
+.opme-item-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.opme-item-name{font-size:13px;color:var(--text);font-weight:500;}
+.opme-item-detail{font-size:11px;color:var(--text3);margin-top:2px;}
+.opme-pending{color:#FFB347;font-size:11px;font-weight:600;
+  background:rgba(255,179,71,0.1);border:1px solid rgba(255,179,71,0.25);
+  padding:1px 8px;border-radius:4px;display:inline-block;margin-top:3px;}
+
+.divider-info{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:8px;margin-top:16px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:14px 16px;
+}
+.divider-info-item .label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:2px;}
+.divider-info-item .value{font-size:13px;color:var(--text);font-weight:500;}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:60px 20px;color:var(--text3);}
+.empty-icon{font-size:48px;margin-bottom:16px;opacity:0.3;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:24px;right:24px;z-index:100;
+  background:rgba(20,20,40,0.95);border:1px solid rgba(108,99,255,0.4);
+  color:var(--text);padding:14px 20px;border-radius:12px;font-size:13px;
+  backdrop-filter:blur(20px);transform:translateY(80px);opacity:0;
+  transition:all 0.4s cubic-bezier(0.23,1,0.32,1);max-width:320px;
+}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* ── FILE INFO ── */
+.file-info{
+  display:none;align-items:center;gap:12px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:14px 18px;margin-bottom:20px;
+}
+.file-info.show{display:flex;}
+.file-icon{font-size:24px;}
+.file-name{font-size:13px;font-weight:500;color:var(--text);}
+.file-size{font-size:11px;color:var(--text3);}
+.file-remove{margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;
+  padding:4px;border-radius:6px;transition:all 0.2s;}
+.file-remove:hover{color:var(--accent3);background:rgba(255,107,107,0.1);}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(108,99,255,0.3);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(108,99,255,0.5);}
+
+/* ── RESPONSIVO ── */
+@media(max-width:600px){
+  .app{padding:24px 16px 60px;}
+  h1{font-size:32px;}
+  .upload-zone{padding:40px 20px;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas-bg"></canvas>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-badge"><span class="dot"></span>IA · Análise Cirúrgica</div>
+    <h1>Analisador OPME</h1>
+    <p class="header-sub">Faça upload do Mapa Cirúrgico em PDF e identifique<br>automaticamente todos os procedimentos com potencial de OPME.</p>
+  </div>
+
+  <!-- UPLOAD -->
+  <div class="upload-zone" id="dropZone">
+    <div class="upload-icon">📄</div>
+    <div class="upload-title">Arraste o PDF aqui</div>
+    <div class="upload-sub">ou clique para selecionar o arquivo</div>
+    <span class="upload-hint">Mapa Cirúrgico · PDF</span>
+    <input type="file" id="fileInput" accept=".pdf,application/pdf">
+  </div>
+
+  <!-- FILE INFO -->
+  <div class="file-info" id="fileInfo">
+    <span class="file-icon">📋</span>
+    <div>
+      <div class="file-name" id="fileName">—</div>
+      <div class="file-size" id="fileSize">—</div>
+    </div>
+    <button class="file-remove" id="removeFile" title="Remover">✕</button>
+  </div>
+
+  <!-- AÇÕES -->
+  <div class="action-row">
+    <button class="btn btn-primary" id="btnAnalyze" style="display:none">
+      <span>🔍</span> Analisar OPME
+    </button>
+    <button class="btn btn-secondary" id="btnNew" style="display:none">
+      <span>↺</span> Novo arquivo
+    </button>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading">
+    <div class="loader-ring"></div>
+    <div class="loader-text" id="loaderMsg">Lendo o mapa cirúrgico</div>
+    <div class="loader-dots" style="margin-top:6px;font-size:20px;">
+      <span>·</span><span>·</span><span>·</span>
+    </div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div class="results-section" id="results">
+
+    <!-- STATS -->
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <!-- CARDS -->
+    <div class="section-label">Procedimentos analisados</div>
+    <div id="cardsContainer"></div>
+
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── PARTÍCULAS ── */
+(function(){
+  var c=document.getElementById('canvas-bg');
+  var ctx=c.getContext('2d');
+  var W,H,pts=[];
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;}
+  resize();window.addEventListener('resize',resize);
+  for(var i=0;i<60;i++){pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*1.5+.5,o:Math.random()*.5+.1});}
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(function(p){
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0)p.x=W;if(p.x>W)p.x=0;
+      if(p.y<0)p.y=H;if(p.y>H)p.y=0;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(108,99,255,'+p.o+')';ctx.fill();
+    });
+    pts.forEach(function(a,i){pts.slice(i+1).forEach(function(b){
+      var d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(d<120){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+      ctx.strokeStyle='rgba(108,99,255,'+(0.08*(1-d/120))+')';ctx.lineWidth=.5;ctx.stroke();}
+    });});
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ── UI ── */
+var fileInput=document.getElementById('fileInput');
+var dropZone=document.getElementById('dropZone');
+var fileInfo=document.getElementById('fileInfo');
+var btnAnalyze=document.getElementById('btnAnalyze');
+var btnNew=document.getElementById('btnNew');
+var loading=document.getElementById('loading');
+var results=document.getElementById('results');
+var currentFile=null;
+
+dropZone.addEventListener('click',function(){fileInput.click();});
+dropZone.addEventListener('dragover',function(e){e.preventDefault();dropZone.classList.add('drag-over');});
+dropZone.addEventListener('dragleave',function(){dropZone.classList.remove('drag-over');});
+dropZone.addEventListener('drop',function(e){
+  e.preventDefault();dropZone.classList.remove('drag-over');
+  var f=e.dataTransfer.files[0];
+  if(f&&f.type==='application/pdf')setFile(f);else showToast('⚠️ Por favor, selecione um arquivo PDF');
+});
+fileInput.addEventListener('change',function(){if(fileInput.files[0])setFile(fileInput.files[0]);});
+document.getElementById('removeFile').addEventListener('click',resetFile);
+btnNew.addEventListener('click',resetFile);
+btnAnalyze.addEventListener('click',analyzeFile);
+
+function setFile(f){
+  currentFile=f;
+  document.getElementById('fileName').textContent=f.name;
+  document.getElementById('fileSize').textContent=formatSize(f.size);
+  fileInfo.classList.add('show');
+  dropZone.style.display='none';
+  btnAnalyze.style.display='inline-flex';
+  results.classList.remove('show');
+  document.getElementById('statsGrid').innerHTML='';
+  document.getElementById('cardsContainer').innerHTML='';
+}
+
+function resetFile(){
+  currentFile=null;fileInput.value='';
+  fileInfo.classList.remove('show');
+  dropZone.style.display='block';
+  btnAnalyze.style.display='none';
+  btnNew.style.display='none';
+  results.classList.remove('show');
+  loading.classList.remove('show');
+  document.getElementById('statsGrid').innerHTML='';
+  document.getElementById('cardsContainer').innerHTML='';
+}
+
+function formatSize(b){return b>1048576?(b/1048576).toFixed(1)+' MB':(b/1024).toFixed(0)+' KB';}
+
+function showToast(msg,dur){
+  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},dur||3000);
+}
+
+var loaderMsgs=['Lendo o mapa cirúrgico','Identificando procedimentos','Verificando OPMEs','Classificando materiais','Finalizando análise'];
+var loaderIdx=0,loaderTimer=null;
+function startLoaderCycle(){
+  document.getElementById('loaderMsg').textContent=loaderMsgs[0];loaderIdx=1;
+  loaderTimer=setInterval(function(){
+    document.getElementById('loaderMsg').textContent=loaderMsgs[loaderIdx%loaderMsgs.length];loaderIdx++;
+  },2200);
+}
+function stopLoaderCycle(){clearInterval(loaderTimer);}
+
+async function analyzeFile(){
+  if(!currentFile)return;
+  loading.classList.add('show');
+  btnAnalyze.style.display='none';
+  results.classList.remove('show');
+  startLoaderCycle();
+
+  try{
+    var base64=await toBase64(currentFile);
+    var prompt=`Você é um especialista em faturamento hospitalar e OPME (Órteses, Próteses e Materiais Especiais).
+
+Analise este Mapa Cirúrgico em PDF e retorne APENAS um JSON válido (sem texto, sem markdown, sem blocos de código) seguindo exatamente esta estrutura:
+
+{
+  "data_cirurgia": "DD/MM/AAAA",
+  "total_procedimentos": número,
+  "total_com_opme": número,
+  "total_sem_opme": número,
+  "pacientes": [
+    {
+      "nome": "PACIENTE 1",
+      "idade": "ex: 47a",
+      "sexo": "M ou F",
+      "convenio": "nome do convênio",
+      "medico": "MÉDICO RESPONSÁVEL",
+      "sala": "SALA X",
+      "horario": "HH:MM – HH:MM",
+      "procedimentos": [
+        {
+          "codigo": "código AMB ou TUSS",
+          "nome": "nome completo do procedimento",
+          "qtd_solic": número,
+          "qtd_aut": número ou null,
+          "principal": true ou false
+        }
+      ],
+      "opme": [
+        {
+          "nome": "nome do material/implante",
+          "ref": "referência se disponível ou null",
+          "fornecedor": "nome ou null",
+          "qtd_sol": número,
+          "qtd_aut": número ou null,
+          "status": "PENDENTE" ou "AUTORIZADO" ou "PARTICULAR"
+        }
+      ],
+      "tem_opme": true ou false,
+      "cti": false,
+      "internado": false,
+      "observacoes": "observações clínicas relevantes ou null"
+    }
+  ]
+}
+
+Regras CRÍTICAS de privacidade — OBRIGATÓRIAS:
+- NUNCA use o nome real do paciente — use sempre "PACIENTE 1", "PACIENTE 2", etc.
+- NUNCA use o nome real do médico — use sempre "MÉDICO RESPONSÁVEL"
+- NUNCA inclua CPF, telefone, matrícula, data de nascimento ou qualquer dado pessoal
+- Se houver "OPME PENDENTE" como nome, mantenha e marque status como "PENDENTE"
+- Materiais particulares (não pelo convênio) marquem status como "PARTICULAR"
+- Se o campo qtd_aut não estiver disponível, use null
+- Inclua TODOS os pacientes do mapa, com ou sem OPME
+- Se não houver OPME, retorne "opme": [] e "tem_opme": false
+- Retorne SOMENTE o JSON, nada mais`;
+
+    var response=await fetch('https://corsproxy.io/?url=https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:4000,
+        messages:[{role:'user',content:[
+          {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+          {type:'text',text:prompt}
+        ]}]
+      })
+    });
+    var data=await response.json();
+    var raw=data.content.map(function(b){return b.text||'';}).join('');
+    var clean=raw.replace(/```json|```/g,'').trim();
+    var json=JSON.parse(clean);
+    stopLoaderCycle();
+    loading.classList.remove('show');
+    renderResults(json);
+    btnNew.style.display='inline-flex';
+  }catch(e){
+    stopLoaderCycle();
+    loading.classList.remove('show');
+    btnAnalyze.style.display='inline-flex';
+    showToast('❌ Erro ao analisar: '+e.message,5000);
+    console.error(e);
+  }
+}
+
+function toBase64(file){
+  return new Promise(function(res,rej){
+    var r=new FileReader();
+    r.onload=function(){res(r.result.split(',')[1]);};
+    r.onerror=function(){rej(new Error('Falha ao ler arquivo'));};
+    r.readAsDataURL(file);
+  });
+}
+
+function renderResults(data){
+  results.classList.add('show');
+
+  /* STATS */
+  var sg=document.getElementById('statsGrid');
+  sg.innerHTML='';
+  var stats=[
+    {n:data.total_procedimentos,label:'Procedimentos',cls:'accent'},
+    {n:data.total_com_opme,label:'Com OPME',cls:'danger'},
+    {n:data.total_sem_opme,label:'Sem OPME',cls:'success'},
+    {n:data.pacientes?data.pacientes.length:0,label:'Pacientes',cls:'warning'}
+  ];
+  stats.forEach(function(s,i){
+    var d=document.createElement('div');
+    d.className='stat-card '+s.cls;
+    d.style.animationDelay=(i*0.08)+'s';
+    d.innerHTML='<div class="stat-number">'+s.n+'</div><div class="stat-label">'+s.label+'</div>';
+    sg.appendChild(d);
+  });
+
+  /* CARDS PACIENTES */
+  var cc=document.getElementById('cardsContainer');
+  cc.innerHTML='';
+  var pacientes=data.pacientes||[];
+  if(!pacientes.length){
+    cc.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div>Nenhum paciente encontrado</div></div>';
+    return;
+  }
+
+  /* Ordena: com OPME primeiro */
+  pacientes.sort(function(a,b){return (b.tem_opme?1:0)-(a.tem_opme?1:0);});
+
+  pacientes.forEach(function(p,i){
+    var card=document.createElement('div');
+    card.className='patient-card';
+    card.style.animationDelay=(i*0.07)+'s';
+
+    var sexoLabel=p.sexo==='F'?'Feminino':p.sexo==='M'?'Masculino':(p.sexo||'');
+    var badgeHtml=p.tem_opme?'<span class="badge-opme">⚠ OPME</span>':'<span class="badge-ok">✓ Sem OPME</span>';
+
+    /* OPME pendentes? */
+    var hasPending=(p.opme||[]).some(function(o){return o.status==='PENDENTE';});
+    if(hasPending)badgeHtml='<span class="badge-pending">⏳ OPME Pendente</span>';
+
+    /* HEADER */
+    card.innerHTML=`
+      <div class="card-header">
+        <div class="patient-info">
+          <div class="patient-name">${esc(p.nome||'Paciente')}</div>
+          <div class="patient-meta">
+            ${p.idade?`<span class="meta-chip">🎂 ${esc(p.idade)}</span>`:''}
+            ${sexoLabel?`<span class="meta-chip">${p.sexo==='F'?'♀':'♂'} ${sexoLabel}</span>`:''}
+            ${p.convenio?`<span class="meta-chip">🏥 ${esc(p.convenio)}</span>`:''}
+            ${p.sala?`<span class="meta-chip">🚪 ${esc(p.sala)}</span>`:''}
+            ${p.horario?`<span class="meta-chip">⏰ ${esc(p.horario)}</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
+          ${badgeHtml}
+          <span class="chevron">⌄</span>
+        </div>
+      </div>
+      <div class="card-body"><div class="card-body-inner" id="body-${i}"></div></div>
+    `;
+
+    var header=card.querySelector('.card-header');
+    header.addEventListener('click',function(){
+      card.classList.toggle('open');
+      if(card.classList.contains('open'))buildBody(p,card.querySelector('.card-body-inner'));
+    });
+
+    cc.appendChild(card);
+
+    /* Auto-abre se tem OPME */
+    if(p.tem_opme){
+      setTimeout(function(){
+        card.classList.add('open');
+        buildBody(p,card.querySelector('.card-body-inner'));
+      },(i*70)+300);
+    }
+  });
+}
+
+function buildBody(p,el){
+  if(el.dataset.built)return;
+  el.dataset.built='1';
+
+  /* Info extra */
+  var infoHtml=`<div class="divider-info">
+    <div class="divider-info-item"><div class="label">Médico</div><div class="value">${esc(p.medico||'—')}</div></div>
+    <div class="divider-info-item"><div class="label">CTI</div><div class="value">${p.cti?'Sim':'Não'}</div></div>
+    <div class="divider-info-item"><div class="label">Internado</div><div class="value">${p.internado?'Sim':'Não'}</div></div>
+    ${p.observacoes?`<div class="divider-info-item" style="grid-column:1/-1"><div class="label">Obs</div><div class="value" style="font-size:12px;color:var(--text2)">${esc(p.observacoes)}</div></div>`:''}
+  </div>`;
+
+  /* Procedimentos */
+  var procsHtml='<div style="margin-bottom:12px"><div class="section-label" style="margin-bottom:10px">Procedimentos</div>';
+  (p.procedimentos||[]).forEach(function(pr){
+    procsHtml+=`<div class="proc-item">
+      <div class="proc-code">${esc(pr.codigo||'')}</div>
+      <div class="proc-name">${esc(pr.nome||'')}${pr.principal?'&nbsp;<span style="font-size:10px;background:rgba(108,99,255,0.2);border:1px solid rgba(108,99,255,0.4);color:var(--accent);padding:1px 7px;border-radius:4px;font-weight:600">PRINCIPAL</span>':''}</div>
+      <div class="proc-qty">Solic: ${pr.qtd_solic||1}${pr.qtd_aut!=null?' · Aut: '+pr.qtd_aut:''}</div>
+    </div>`;
+  });
+  procsHtml+='</div>';
+
+  /* OPMEs */
+  var opmeHtml='';
+  if(p.tem_opme&&p.opme&&p.opme.length){
+    opmeHtml='<div class="opme-list"><div class="opme-title">Materiais OPME identificados</div>';
+    p.opme.forEach(function(o){
+      var statusHtml='';
+      if(o.status==='PENDENTE')statusHtml='<span class="opme-pending">⏳ Autorização pendente</span>';
+      else if(o.status==='PARTICULAR')statusHtml='<span class="opme-pending" style="border-color:rgba(108,99,255,0.3);color:var(--accent);background:rgba(108,99,255,0.1)">💳 Material particular</span>';
+      opmeHtml+=`<div class="opme-item">
+        <span class="opme-item-icon">🔩</span>
+        <div>
+          <div class="opme-item-name">${esc(o.nome||'Material OPME')}</div>
+          <div class="opme-item-detail">
+            ${o.fornecedor?'Fornec: '+esc(o.fornecedor)+' &nbsp;·&nbsp; ':''}
+            Qtd sol: ${o.qtd_sol||1}${o.qtd_aut!=null?' · Qtd aut: '+o.qtd_aut:''}
+            ${o.ref?'&nbsp;·&nbsp; Ref: '+esc(o.ref):''}
+          </div>
+          ${statusHtml}
+        </div>
+      </div>`;
+    });
+    opmeHtml+='</div>';
+  }
+
+  el.innerHTML=infoHtml+procsHtml+opmeHtml;
+}
+
+function esc(s){
+  if(!s)return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
