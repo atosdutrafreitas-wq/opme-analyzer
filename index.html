@@ -560,9 +560,9 @@ Regras CRÍTICAS de privacidade — OBRIGATÓRIAS:
 - Se não houver OPME, retorne "opme": [] e "tem_opme": false
 - Retorne SOMENTE o JSON, nada mais`;
 
-    var response=await fetch('https://corsproxy.io/?url=https://api.anthropic.com/v1/messages',{
+    var response=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent('https://api.anthropic.com/v1/messages'),{
       method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:4000,
