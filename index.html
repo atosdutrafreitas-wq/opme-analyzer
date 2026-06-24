@@ -3,706 +3,2152 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OPME Analyzer — Hospital Regina</title>
+<title>AUTHSYS · Controle de Autorizações</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-*{margin:0;padding:0;box-sizing:border-box;}
-
-:root{
-  --bg:#050814;
-  --surface:rgba(255,255,255,0.04);
-  --surface2:rgba(255,255,255,0.08);
-  --border:rgba(255,255,255,0.08);
-  --border2:rgba(255,255,255,0.15);
-  --accent:#6C63FF;
-  --accent2:#00D4AA;
-  --accent3:#FF6B6B;
-  --text:#F0F0FF;
-  --text2:rgba(240,240,255,0.55);
-  --text3:rgba(240,240,255,0.3);
-  --glow:rgba(108,99,255,0.35);
-  --glow2:rgba(0,212,170,0.25);
+:root {
+  --bg: #080C14;
+  --bg2: #0D1420;
+  --surface: #111827;
+  --surface2: #1A2640;
+  --cyan: #00E5FF;
+  --cyan-dim: rgba(0,229,255,0.12);
+  --cyan-glow: rgba(0,229,255,0.25);
+  --red: #FF1744;
+  --red-dim: rgba(255,23,68,0.12);
+  --amber: #FFB300;
+  --amber-dim: rgba(255,179,0,0.12);
+  --green: #00E676;
+  --green-dim: rgba(0,230,118,0.12);
+  --text: #E8F0FE;
+  --text2: #7B8BAA;
+  --text3: #3D4F6E;
+  --border: rgba(0,229,255,0.1);
+  --border2: rgba(0,229,255,0.2);
+  --radius: 8px;
+  --radius-lg: 14px;
+  --font: 'Space Grotesk', system-ui, sans-serif;
+  --mono: 'Space Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  display: flex;
+  overflow-x: hidden;
 }
 
-body{
-  background:var(--bg);
-  font-family:'Inter',sans-serif;
-  color:var(--text);
-  min-height:100vh;
-  overflow-x:hidden;
+/* ── GRID BACKGROUND ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
 }
 
-/* ── CANVAS PARTÍCULAS ── */
-#canvas-bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
-
-/* ── ORBS FLUTUANTES ── */
-.orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:0.18;pointer-events:none;z-index:0;animation:orbFloat 12s ease-in-out infinite;}
-.orb1{width:500px;height:500px;background:var(--accent);top:-150px;left:-100px;animation-delay:0s;}
-.orb2{width:400px;height:400px;background:var(--accent2);bottom:-100px;right:-80px;animation-delay:-5s;}
-.orb3{width:300px;height:300px;background:#FF6B9D;top:40%;left:60%;animation-delay:-9s;}
-
-@keyframes orbFloat{
-  0%,100%{transform:translate(0,0) scale(1);}
-  33%{transform:translate(30px,-40px) scale(1.08);}
-  66%{transform:translate(-20px,25px) scale(0.95);}
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 72px;
+  min-height: 100vh;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  z-index: 50;
+  gap: 4px;
+}
+.sidebar-logo {
+  width: 40px; height: 40px;
+  border: 1.5px solid var(--cyan);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px; font-weight: 700;
+  color: var(--cyan);
+  margin-bottom: 24px;
+  position: relative;
+  animation: logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%,100% { box-shadow: 0 0 0 0 var(--cyan-glow); }
+  50% { box-shadow: 0 0 0 6px rgba(0,229,255,0); }
+}
+.nav-btn {
+  width: 48px; height: 48px;
+  border-radius: var(--radius);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text2);
+  transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+  font-size: 10px;
+}
+.nav-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.nav-btn:hover { color: var(--cyan); border-color: var(--border2); background: var(--cyan-dim); }
+.nav-btn.active {
+  color: var(--cyan);
+  border-color: var(--cyan);
+  background: var(--cyan-dim);
+  box-shadow: 0 0 16px var(--cyan-glow), inset 0 0 16px rgba(0,229,255,0.05);
+}
+.nav-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -1px; top: 25%; bottom: 25%;
+  width: 3px;
+  background: var(--cyan);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 8px var(--cyan);
+}
+.nav-btn span { font-size: 9px; font-family: var(--mono); letter-spacing: .03em; }
+.sidebar-bottom { margin-top: auto; }
+.ecg-line {
+  width: 40px; height: 24px;
+  margin-bottom: 16px;
 }
 
-/* ── LAYOUT ── */
-.app{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:40px 24px 80px;}
+/* ── MAIN ── */
+.main {
+  margin-left: 72px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
 
-/* ── HEADER ── */
-.header{text-align:center;margin-bottom:56px;}
-.header-badge{
-  display:inline-flex;align-items:center;gap:8px;
-  background:rgba(108,99,255,0.12);border:1px solid rgba(108,99,255,0.3);
-  padding:6px 16px;border-radius:100px;font-size:11px;letter-spacing:2px;
-  text-transform:uppercase;color:var(--accent);margin-bottom:24px;
-  animation:badgePulse 3s ease-in-out infinite;
+/* ── TOPBAR ── */
+.topbar {
+  height: 56px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  gap: 16px;
+  background: rgba(8,12,20,0.8);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 40;
 }
-.header-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent2);animation:dotBlink 1.5s ease-in-out infinite;}
-@keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(108,99,255,0.2);}50%{box-shadow:0 0 0 8px rgba(108,99,255,0);}}
-@keyframes dotBlink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+.topbar-title { font-size: 13px; font-family: var(--mono); color: var(--cyan); letter-spacing: .08em; }
+.topbar-sep { color: var(--text3); }
+.topbar-page { font-size: 13px; color: var(--text2); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.clock { font-family: var(--mono); font-size: 13px; color: var(--text2); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); animation: blink 2s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
 
-h1{
-  font-size:clamp(32px,6vw,56px);font-weight:700;line-height:1.1;
-  background:linear-gradient(135deg,#fff 0%,rgba(108,99,255,0.9) 50%,#00D4AA 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  margin-bottom:16px;
-}
-.header-sub{font-size:15px;color:var(--text2);font-weight:300;line-height:1.6;}
+/* ── PAGE ── */
+.page { display: none; padding: 28px; animation: fadeIn .25s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
 
-/* ── UPLOAD ZONE ── */
-.upload-zone{
-  position:relative;border:1.5px dashed rgba(108,99,255,0.4);border-radius:20px;
-  padding:56px 40px;text-align:center;cursor:pointer;
-  background:var(--surface);
-  transition:all 0.4s cubic-bezier(0.23,1,0.32,1);
-  overflow:hidden;margin-bottom:32px;
-}
-.upload-zone::before{
-  content:'';position:absolute;inset:0;border-radius:20px;
-  background:radial-gradient(ellipse at 50% 0%,rgba(108,99,255,0.08) 0%,transparent 70%);
-  opacity:0;transition:opacity 0.4s;pointer-events:none;
-}
-.upload-zone:hover{border-color:rgba(108,99,255,0.8);background:rgba(108,99,255,0.06);transform:translateY(-2px);}
-.upload-zone:hover::before{opacity:1;}
-.upload-zone.drag-over{border-color:var(--accent2);background:rgba(0,212,170,0.06);transform:scale(1.01);}
-.upload-zone.drag-over::before{opacity:1;background:radial-gradient(ellipse at 50% 0%,rgba(0,212,170,0.1) 0%,transparent 70%);}
+/* ── SECTION HEADER ── */
+.section-head { margin-bottom: 24px; }
+.section-eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .15em; color: var(--cyan); opacity: .7; margin-bottom: 6px; text-transform: uppercase; }
+.section-title { font-size: 22px; font-weight: 600; color: var(--text); }
+.section-sub { font-size: 13px; color: var(--text2); margin-top: 4px; }
 
-.upload-icon{
-  width:72px;height:72px;margin:0 auto 20px;
-  background:linear-gradient(135deg,rgba(108,99,255,0.2),rgba(0,212,170,0.1));
-  border:1px solid rgba(108,99,255,0.3);border-radius:18px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:30px;animation:iconFloat 4s ease-in-out infinite;
-  position:relative;overflow:hidden;
+/* ── STAT GRID ── */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s;
 }
-.upload-icon::after{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(135deg,rgba(108,99,255,0.3),transparent);
-  animation:shimmer 2.5s linear infinite;
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
 }
-@keyframes iconFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
-@keyframes shimmer{0%{transform:translateX(-100%) rotate(45deg);}100%{transform:translateX(200%) rotate(45deg);}}
+.stat-card.red::before { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.stat-card.amber::before { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.stat-card.green::before { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.stat-card.cyan::before { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+.stat-num { font-size: 28px; font-weight: 700; font-family: var(--mono); line-height: 1; }
+.stat-num.red { color: var(--red); text-shadow: 0 0 20px rgba(255,23,68,.4); }
+.stat-num.amber { color: var(--amber); text-shadow: 0 0 20px rgba(255,179,0,.4); }
+.stat-num.green { color: var(--green); text-shadow: 0 0 20px rgba(0,230,118,.4); }
+.stat-num.cyan { color: var(--cyan); text-shadow: 0 0 20px rgba(0,229,255,.4); }
+.stat-lbl { font-size: 11px; color: var(--text2); margin-top: 6px; font-family: var(--mono); letter-spacing: .04em; text-transform: uppercase; }
 
-.upload-title{font-size:17px;font-weight:600;margin-bottom:6px;color:var(--text);}
-.upload-sub{font-size:13px;color:var(--text2);}
-.upload-hint{
-  display:inline-block;margin-top:16px;font-size:11px;letter-spacing:1px;
-  text-transform:uppercase;color:var(--text3);
-  background:var(--surface2);border:1px solid var(--border);
-  padding:4px 14px;border-radius:100px;
+/* ── CARDS ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 16px;
+  transition: border-color .2s;
 }
-input[type=file]{display:none;}
+.card:hover { border-color: var(--border2); }
+.card-sm {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 10px;
+}
 
-/* ── BTN ── */
-.btn{
-  display:inline-flex;align-items:center;gap:10px;
-  padding:14px 32px;border-radius:12px;border:none;cursor:pointer;
-  font-family:'Inter',sans-serif;font-size:14px;font-weight:600;
-  letter-spacing:0.3px;transition:all 0.3s cubic-bezier(0.23,1,0.32,1);
-  position:relative;overflow:hidden;
+/* ── ALERT TOMORROW ── */
+.alert-critical {
+  background: rgba(255,23,68,0.07);
+  border: 1px solid rgba(255,23,68,0.35);
+  border-radius: var(--radius-lg);
+  padding: 18px 22px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+  animation: alertPulse 2.5s ease-in-out infinite;
 }
-.btn::before{
-  content:'';position:absolute;inset:0;
-  background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent);
-  opacity:0;transition:opacity 0.3s;
+@keyframes alertPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(255,23,68,0); }
+  50% { box-shadow: 0 0 0 4px rgba(255,23,68,0.08); }
 }
-.btn:hover::before{opacity:1;}
-.btn-primary{
-  background:linear-gradient(135deg,var(--accent),#8B5CF6);
-  color:white;box-shadow:0 0 30px rgba(108,99,255,0.4);
+.alert-critical::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--red);
+  box-shadow: 0 0 12px var(--red);
 }
-.btn-primary:hover{transform:translateY(-2px) scale(1.02);box-shadow:0 0 50px rgba(108,99,255,0.6);}
-.btn-primary:active{transform:scale(0.98);}
-.btn-secondary{
-  background:var(--surface2);color:var(--text2);
-  border:1px solid var(--border2);
+.alert-ok {
+  background: rgba(0,230,118,0.07);
+  border: 1px solid rgba(0,230,118,0.25);
+  border-radius: var(--radius-lg);
+  padding: 18px 22px;
+  margin-bottom: 20px;
 }
-.btn-secondary:hover{background:var(--surface);color:var(--text);transform:translateY(-1px);}
+.alert-ok::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--green);
+}
+.alert-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.alert-sub { font-size: 12.5px; color: var(--text2); padding-left: 2px; }
 
-.action-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;}
+/* ── BADGES ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: .02em;
+  border: 1px solid;
+}
+.badge-red   { background: var(--red-dim);   color: var(--red);   border-color: rgba(255,23,68,.3);   }
+.badge-amber { background: var(--amber-dim); color: var(--amber); border-color: rgba(255,179,0,.3);   }
+.badge-green { background: var(--green-dim); color: var(--green); border-color: rgba(0,230,118,.3);   }
+.badge-cyan  { background: var(--cyan-dim);  color: var(--cyan);  border-color: rgba(0,229,255,.3);   }
+.badge-gray  { background: rgba(123,139,170,.1); color: var(--text2); border-color: rgba(123,139,170,.2); }
 
-/* ── LOADING ── */
-.loading{display:none;text-align:center;padding:60px 20px;}
-.loading.show{display:block;}
-.loader-ring{
-  width:64px;height:64px;margin:0 auto 24px;position:relative;
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+  font-family: var(--font);
+  transition: all .15s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+  overflow: hidden;
 }
-.loader-ring::before,.loader-ring::after{
-  content:'';position:absolute;inset:0;border-radius:50%;
-  border:2px solid transparent;
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background .15s;
 }
-.loader-ring::before{
-  border-top-color:var(--accent);border-right-color:var(--accent);
-  animation:spin 1.2s linear infinite;
+.btn:active::after { background: rgba(255,255,255,0.05); }
+.btn:active { transform: scale(0.98); }
+.btn-cyan {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  border-color: rgba(0,229,255,.35);
 }
-.loader-ring::after{
-  border-bottom-color:var(--accent2);border-left-color:var(--accent2);
-  animation:spin 1.2s linear infinite reverse;inset:6px;
+.btn-cyan:hover { background: rgba(0,229,255,.2); border-color: var(--cyan); box-shadow: 0 0 20px var(--cyan-glow); }
+.btn-red {
+  background: var(--red-dim);
+  color: var(--red);
+  border-color: rgba(255,23,68,.35);
 }
-@keyframes spin{to{transform:rotate(360deg);}}
-.loader-text{font-size:14px;color:var(--text2);}
-.loader-dots span{animation:dotJump 1.4s ease-in-out infinite;}
-.loader-dots span:nth-child(2){animation-delay:.2s;}
-.loader-dots span:nth-child(3){animation-delay:.4s;}
-@keyframes dotJump{0%,80%,100%{transform:translateY(0);opacity:0.3;}40%{transform:translateY(-6px);opacity:1;}}
+.btn-outline {
+  background: transparent;
+  color: var(--text2);
+  border-color: var(--border);
+}
+.btn-outline:hover { border-color: var(--border2); color: var(--text); background: rgba(255,255,255,.03); }
+.btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; }
 
-/* ── RESUMO STATS ── */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px;}
-.stat-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:14px;
-  padding:20px;position:relative;overflow:hidden;
-  animation:cardIn 0.5s cubic-bezier(0.23,1,0.32,1) both;
+/* ── TABLE ── */
+.tbl-wrap { overflow-x: auto; border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead { position: sticky; top: 56px; z-index: 10; }
+th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  white-space: nowrap;
 }
-.stat-card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(0,229,255,0.05);
+  vertical-align: middle;
+  white-space: nowrap;
 }
-.stat-number{font-size:32px;font-weight:700;line-height:1;margin-bottom:4px;}
-.stat-label{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);}
-.stat-card.accent .stat-number{color:var(--accent);}
-.stat-card.success .stat-number{color:var(--accent2);}
-.stat-card.warning .stat-number{color:#FFB347;}
-.stat-card.danger .stat-number{color:var(--accent3);}
+tr.p1 td { background: rgba(255,23,68,0.04); }
+tr.p2 td { background: rgba(255,179,0,0.04); }
+tr.clickable { cursor: pointer; transition: background .12s; }
+tr.clickable:hover td { background: var(--cyan-dim) !important; }
+tr:last-child td { border-bottom: none; }
 
-/* ── RESULTADO ── */
-.results-section{display:none;}
-.results-section.show{display:block;}
-.section-label{
-  font-size:11px;letter-spacing:3px;text-transform:uppercase;
-  color:var(--text3);margin-bottom:16px;display:flex;align-items:center;gap:12px;
+/* ── DAY BLOCKS ── */
+.day-block { margin-bottom: 10px; }
+.day-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
 }
-.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.day-header:hover { border-color: var(--border2); background: var(--surface2); }
+.day-label { font-size: 13px; font-weight: 600; font-family: var(--mono); }
+.day-sub { font-size: 12px; color: var(--text2); }
+.day-chevron { margin-left: auto; color: var(--text3); transition: transform .2s; font-size: 18px; line-height: 1; }
+.day-chevron.open { transform: rotate(180deg); }
+.day-body { display: none; margin-top: 4px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.day-body.open { display: block; }
 
-/* ── CARD PACIENTE ── */
-.patient-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:18px;
-  margin-bottom:16px;overflow:hidden;
-  animation:cardIn 0.6s cubic-bezier(0.23,1,0.32,1) both;
-  transition:border-color 0.3s,transform 0.3s,box-shadow 0.3s;
+/* ── UPLOAD ── */
+.upload-zone {
+  border: 1.5px dashed rgba(0,229,255,.3);
+  border-radius: var(--radius-lg);
+  padding: 52px 32px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: rgba(0,229,255,.02);
+  position: relative;
+  overflow: hidden;
 }
-.patient-card:hover{
-  border-color:rgba(108,99,255,0.4);transform:translateY(-2px);
-  box-shadow:0 8px 40px rgba(108,99,255,0.15);
+.upload-zone::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(circle at center, rgba(0,229,255,.04) 0%, transparent 60%);
+  pointer-events: none;
 }
-@keyframes cardIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.upload-zone:hover, .upload-zone.drag {
+  border-color: var(--cyan);
+  background: var(--cyan-dim);
+  box-shadow: 0 0 40px rgba(0,229,255,.08) inset;
+}
+.upload-icon { font-size: 36px; margin-bottom: 12px; display: block; }
+.upload-title { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.upload-sub { font-size: 12.5px; color: var(--text2); }
 
-.card-header{
-  padding:20px 24px;display:flex;align-items:flex-start;justify-content:space-between;
-  gap:16px;border-bottom:1px solid var(--border);cursor:pointer;
-  position:relative;overflow:hidden;
+/* ── PROGRESS BAR ── */
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 999px;
+  margin-top: 16px;
+  overflow: hidden;
+  display: none;
 }
-.card-header::before{
-  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
-  background:linear-gradient(180deg,var(--accent),var(--accent2));
+.progress-fill {
+  height: 100%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  border-radius: 999px;
+  width: 0%;
+  transition: width .4s ease;
 }
-.patient-info{flex:1;padding-left:8px;}
-.patient-name{font-size:16px;font-weight:600;margin-bottom:4px;color:var(--text);}
-.patient-meta{font-size:12px;color:var(--text2);display:flex;flex-wrap:wrap;gap:8px;}
-.meta-chip{
-  display:inline-flex;align-items:center;gap:4px;
-  background:var(--surface2);border:1px solid var(--border);
-  padding:2px 10px;border-radius:100px;font-size:11px;
-}
-.badge-opme{
-  background:linear-gradient(135deg,rgba(255,107,107,0.2),rgba(255,107,107,0.1));
-  border:1px solid rgba(255,107,107,0.4);color:#FF9494;
-  padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;
-  letter-spacing:0.5px;white-space:nowrap;
-  animation:badgeGlow 2s ease-in-out infinite;
-}
-@keyframes badgeGlow{0%,100%{box-shadow:0 0 0 0 rgba(255,107,107,0.2);}50%{box-shadow:0 0 8px 2px rgba(255,107,107,0.15);}}
 
-.badge-ok{
-  background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.3);color:#00D4AA;
-  padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.5px;
+/* ── MODAL ── */
+.modal-bg {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.7);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
 }
-.badge-pending{
-  background:rgba(255,179,71,0.1);border:1px solid rgba(255,179,71,0.3);color:#FFB347;
-  padding:4px 12px;border-radius:100px;font-size:11px;font-weight:600;letter-spacing:0.5px;
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  width: 540px;
+  max-width: 95vw;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 0 60px rgba(0,229,255,.08), 0 24px 80px rgba(0,0,0,.6);
+  animation: modalIn .2s cubic-bezier(0.4,0,0.2,1);
 }
-.chevron{
-  font-size:18px;color:var(--text3);transition:transform 0.3s cubic-bezier(0.23,1,0.32,1);
-  flex-shrink:0;margin-top:2px;
+@keyframes modalIn { from{opacity:0;transform:scale(.96) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.modal-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
-.patient-card.open .chevron{transform:rotate(180deg);}
-
-/* ── CARD BODY ── */
-.card-body{max-height:0;overflow:hidden;transition:max-height 0.5s cubic-bezier(0.23,1,0.32,1);}
-.patient-card.open .card-body{max-height:800px;}
-.card-body-inner{padding:20px 24px 24px;}
-
-.proc-item{
-  background:var(--surface2);border:1px solid var(--border);border-radius:10px;
-  padding:12px 16px;margin-bottom:8px;font-size:13px;
+.modal-title { font-size: 16px; font-weight: 600; }
+.modal-close {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; line-height: 1;
+  transition: all .15s;
 }
-.proc-code{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:4px;}
-.proc-name{color:var(--text);font-weight:500;margin-bottom:2px;}
-.proc-qty{font-size:11px;color:var(--text3);}
-
-.opme-list{margin-top:16px;}
-.opme-title{
-  font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent3);
-  margin-bottom:10px;display:flex;align-items:center;gap:8px;
+.modal-close:hover { border-color: var(--red); color: var(--red); }
+.modal-row {
+  display: flex; gap: 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  align-items: baseline;
 }
-.opme-title::before{content:'⚠';font-style:normal;}
-.opme-item{
-  display:flex;align-items:flex-start;gap:10px;
-  background:rgba(255,107,107,0.06);border:1px solid rgba(255,107,107,0.2);
-  border-radius:8px;padding:10px 14px;margin-bottom:6px;
-}
-.opme-item-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
-.opme-item-name{font-size:13px;color:var(--text);font-weight:500;}
-.opme-item-detail{font-size:11px;color:var(--text3);margin-top:2px;}
-.opme-pending{color:#FFB347;font-size:11px;font-weight:600;
-  background:rgba(255,179,71,0.1);border:1px solid rgba(255,179,71,0.25);
-  padding:1px 8px;border-radius:4px;display:inline-block;margin-top:3px;}
-
-.divider-info{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
-  gap:8px;margin-top:16px;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:10px;padding:14px 16px;
-}
-.divider-info-item .label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:2px;}
-.divider-info-item .value{font-size:13px;color:var(--text);font-weight:500;}
-
-/* ── EMPTY STATE ── */
-.empty{text-align:center;padding:60px 20px;color:var(--text3);}
-.empty-icon{font-size:48px;margin-bottom:16px;opacity:0.3;}
+.modal-lbl { color: var(--text2); min-width: 120px; flex-shrink: 0; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; padding-top: 1px; }
+.modal-val { color: var(--text); font-weight: 500; }
+.hist-sect { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 16px; }
+.hist-title { font-size: 11px; font-family: var(--mono); letter-spacing: .1em; color: var(--cyan); text-transform: uppercase; margin-bottom: 10px; }
+.hist-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(0,229,255,.06); font-size: 12.5px; }
+.hist-row:last-child { border-bottom: none; }
+.hist-week { font-family: var(--mono); color: var(--text2); font-size: 11px; min-width: 90px; }
 
 /* ── TOAST ── */
-.toast{
-  position:fixed;bottom:24px;right:24px;z-index:100;
-  background:rgba(20,20,40,0.95);border:1px solid rgba(108,99,255,0.4);
-  color:var(--text);padding:14px 20px;border-radius:12px;font-size:13px;
-  backdrop-filter:blur(20px);transform:translateY(80px);opacity:0;
-  transition:all 0.4s cubic-bezier(0.23,1,0.32,1);max-width:320px;
+.toast {
+  position: fixed; bottom: 28px; right: 28px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 12px 20px 12px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  z-index: 500;
+  display: flex; align-items: center; gap: 10px;
+  opacity: 0;
+  transform: translateY(12px) scale(.97);
+  transition: all .25s cubic-bezier(0.4,0,0.2,1);
+  pointer-events: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  max-width: 320px;
 }
-.toast.show{transform:translateY(0);opacity:1;}
+.toast.show { opacity: 1; transform: translateY(0) scale(1); }
+.toast-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
-/* ── FILE INFO ── */
-.file-info{
-  display:none;align-items:center;gap:12px;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:12px;padding:14px 18px;margin-bottom:20px;
+/* ── MISC ── */
+.flex { display: flex; align-items: center; gap: 12px; }
+.flex-end { display: flex; align-items: center; gap: 12px; justify-content: flex-end; }
+.ml-auto { margin-left: auto; }
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text2);
+  font-size: 13px;
+  font-family: var(--mono);
 }
-.file-info.show{display:flex;}
-.file-icon{font-size:24px;}
-.file-name{font-size:13px;font-weight:500;color:var(--text);}
-.file-size{font-size:11px;color:var(--text3);}
-.file-remove{margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;
-  padding:4px;border-radius:6px;transition:all 0.2s;}
-.file-remove:hover{color:var(--accent3);background:rgba(255,107,107,0.1);}
+.empty-icon { font-size: 32px; display: block; margin-bottom: 12px; opacity: .4; }
+.search-box {
+  width: 100%; padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  outline: none;
+  margin-bottom: 16px;
+  transition: border-color .15s;
+}
+.search-box:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,229,255,.08); }
+.search-box::placeholder { color: var(--text3); }
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar{width:6px;}
-::-webkit-scrollbar-track{background:transparent;}
-::-webkit-scrollbar-thumb{background:rgba(108,99,255,0.3);border-radius:3px;}
-::-webkit-scrollbar-thumb:hover{background:rgba(108,99,255,0.5);}
+/* FASE HEADER */
+.fase-bar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 18px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  font-size: 13px; font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: .04em;
+}
 
-/* ── RESPONSIVO ── */
-@media(max-width:600px){
-  .app{padding:24px 16px 60px;}
-  h1{font-size:32px;}
-  .upload-zone{padding:40px 20px;}
-  .stats-grid{grid-template-columns:1fr 1fr;}
+/* PHASE COLORS */
+.btn-show { background:transparent; border:1px solid var(--border); color:var(--text2); padding:5px 14px; border-radius:var(--radius); font-size:12px; cursor:pointer; font-family:var(--font); transition:all .15s; }
+.btn-show:hover { border-color:var(--border2); color:var(--text); }
+
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('NHR0CSSG3W6Y0Nd97');</script>
 </head>
 <body>
 
-<canvas id="canvas-bg"></canvas>
-<div class="orb orb1"></div>
-<div class="orb orb2"></div>
-<div class="orb orb3"></div>
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">AUTH</div>
 
-<div class="app">
+  <button class="nav-btn active" onclick="showPage('agenda',this)" title="Agenda">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>AGENDA</span>
+  </button>
 
-  <!-- HEADER -->
-  <div class="header">
-    <div class="header-badge"><span class="dot"></span>IA · Análise Cirúrgica</div>
-    <h1>Analisador OPME</h1>
-    <p class="header-sub">Faça upload do Mapa Cirúrgico em PDF e identifique<br>automaticamente todos os procedimentos com potencial de OPME.</p>
-  </div>
+  <button class="nav-btn" onclick="showPage('painel',this)" title="Painel">
+    <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    <span>FASES</span>
+  </button>
 
-  <!-- UPLOAD -->
-  <div class="upload-zone" id="dropZone">
-    <div class="upload-icon">📄</div>
-    <div class="upload-title">Arraste o PDF aqui</div>
-    <div class="upload-sub">ou clique para selecionar o arquivo</div>
-    <span class="upload-hint">Mapa Cirúrgico · PDF</span>
-    <input type="file" id="fileInput" accept=".pdf,application/pdf">
-  </div>
+  <button class="nav-btn" onclick="showPage('historico',this)" title="Filas">
+    <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="3" cy="18" r="1.5"/></svg>
+    <span>FILAS</span>
+  </button>
 
-  <!-- FILE INFO -->
-  <div class="file-info" id="fileInfo">
-    <span class="file-icon">📋</span>
-    <div>
-      <div class="file-name" id="fileName">—</div>
-      <div class="file-size" id="fileSize">—</div>
-    </div>
-    <button class="file-remove" id="removeFile" title="Remover">✕</button>
-  </div>
+  <button class="nav-btn" onclick="showPage('riscos',this)" title="Radar de Riscos">
+    <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span>RISCO</span>
+  </button>
 
-  <!-- AÇÕES -->
-  <div class="action-row">
-    <button class="btn btn-primary" id="btnAnalyze" style="display:none">
-      <span>🔍</span> Analisar OPME
+  <button class="nav-btn" onclick="showPage('relatorio',this)" title="Relatório">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    <span>CEO</span>
+  </button>
+
+  <div class="sidebar-bottom">
+    <button class="nav-btn" onclick="showPage('config',this)" title="Configurações">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span>CONFIG</span>
     </button>
-    <button class="btn btn-secondary" id="btnNew" style="display:none">
-      <span>↺</span> Novo arquivo
+    <button class="nav-btn" onclick="showPage('importar',this)" title="Importar">
+      <svg viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>
+      <span>IMPORT</span>
     </button>
   </div>
+</aside>
 
-  <!-- LOADING -->
-  <div class="loading" id="loading">
-    <div class="loader-ring"></div>
-    <div class="loader-text" id="loaderMsg">Lendo o mapa cirúrgico</div>
-    <div class="loader-dots" style="margin-top:6px;font-size:20px;">
-      <span>·</span><span>·</span><span>·</span>
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <span class="topbar-title">AUTHSYS</span>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-page" id="topbar-page">Agenda cirúrgica</span>
+    <div class="topbar-right">
+      <div class="status-dot"></div>
+      <span class="clock" id="clock">--:--:--</span>
     </div>
   </div>
 
-  <!-- RESULTADOS -->
-  <div class="results-section" id="results">
-
-    <!-- STATS -->
-    <div class="stats-grid" id="statsGrid"></div>
-
-    <!-- CARDS -->
-    <div class="section-label">Procedimentos analisados</div>
-    <div id="cardsContainer"></div>
-
+  <!-- AGENDA -->
+  <div id="page-agenda" class="page active">
+    <div class="section-head">
+      <div class="section-eyebrow">módulo 01</div>
+      <div class="section-title">Agenda cirúrgica</div>
+      <div class="section-sub">Próximas 3 semanas — autorizações pendentes em destaque</div>
+    </div>
+    <div id="agenda-stats" class="stat-grid"></div>
+    <div id="agenda-content"><div class="empty"><span class="empty-icon">📋</span>Importe uma planilha para começar.</div></div>
   </div>
 
+  <!-- PAINEL -->
+  <div id="page-painel" class="page">
+    <div class="section-head">
+      <div class="section-eyebrow">módulo 02</div>
+      <div class="section-title">Painel de fases</div>
+      <div class="section-sub">Processos críticos ordenados por prioridade</div>
+    </div>
+    <div id="painel-content"><div class="empty"><span class="empty-icon">⚡</span>Aguardando importação.</div></div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div id="page-historico" class="page">
+    <div class="section-head">
+      <div class="section-eyebrow">módulo 03</div>
+      <div class="section-title">Filas de autorização</div>
+      <div class="section-sub">Pendentes de autorização · Autorizados aguardando procedimento</div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-bottom:20px;">
+      <button class="btn btn-cyan" id="fila-btn-pend" onclick="mostrarFila('pendentes')">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Pendentes de autorização
+      </button>
+      <button class="btn btn-outline" id="fila-btn-aut" onclick="mostrarFila('autorizados')">
+        <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><polyline points="20 6 9 17 4 12"/></svg>
+        Autorizados — aguardando procedimento
+      </button>
+    </div>
+
+    <input class="search-box" id="search-hist" placeholder="Buscar paciente..." oninput="filtrarHistorico(this.value)">
+    <div id="historico-content"><div class="empty"><span class="empty-icon">🕐</span>Carregando...</div></div>
+  </div>
+
+  <!-- RISCOS -->
+  <div id="page-riscos" class="page">
+    <div class="section-head">
+      <div class="section-eyebrow">módulo 05</div>
+      <div class="section-title">Radar de riscos</div>
+      <div class="section-sub">Convênios e médicos com histórico de atraso + processo ativo nos próximos 60 dias sem autorização</div>
+    </div>
+    <div class="flex" style="margin-bottom:20px;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span class="badge badge-red" style="font-size:12px;padding:5px 12px;">🔴 Alto risco</span>
+        <span style="font-size:12px;color:var(--text2);">SLA histórico alto + cirurgia próxima</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-left:16px;">
+        <span class="badge badge-amber" style="font-size:12px;padding:5px 12px;">🟡 Atenção</span>
+        <span style="font-size:12px;color:var(--text2);">SLA na média mas prazo apertando</span>
+      </div>
+      <button class="btn btn-outline ml-auto" onclick="loadRiscos()">↺ Atualizar</button>
+    </div>
+    <div id="riscos-content"><div class="empty"><span class="empty-icon">⚡</span>Carregando radar...</div></div>
+  </div>
+
+  <!-- RELATÓRIO -->
+  <div id="page-relatorio" class="page">
+    <div class="section-head">
+      <div class="section-eyebrow">módulo 05</div>
+      <div class="section-title">Relatório estratégico</div>
+      <div class="section-sub">Visão executiva — convênios, médicos e desempenho operacional</div>
+    </div>
+    <div class="flex" style="margin-bottom:24px;gap:12px;flex-wrap:wrap;">
+      <div class="flex" style="gap:8px;">
+        <label style="font-size:12px;color:var(--text2);font-family:var(--mono);">DE</label>
+        <input type="date" id="rel-de" class="search-box" style="width:150px;margin:0;padding:8px 12px;">
+        <label style="font-size:12px;color:var(--text2);font-family:var(--mono);">ATÉ</label>
+        <input type="date" id="rel-ate" class="search-box" style="width:150px;margin:0;padding:8px 12px;">
+        <button class="btn btn-cyan" onclick="gerarRelatorio()">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Analisar
+        </button>
+      </div>
+      <div class="ml-auto flex" style="gap:8px;">
+        <button class="btn btn-outline" onclick="exportarRelatorioPDF()">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar PDF
+        </button>
+      </div>
+    </div>
+    <div id="relatorio-content"><div class="empty"><span class="empty-icon">📊</span>Selecione o período e clique em Analisar.</div></div>
+  </div>
+
+  <!-- CONFIG -->
+  <div id="page-config" class="page">
+    <div class="section-head">
+      <div class="section-eyebrow">configurações</div>
+      <div class="section-title">Configurações do sistema</div>
+      <div class="section-sub">Prazos de vencimento por convênio · Aprendizado automático</div>
+    </div>
+
+    <div class="card" style="max-width:700px;margin-bottom:16px;">
+      <div style="font-size:10px;font-family:var(--mono);letter-spacing:.12em;color:var(--cyan);text-transform:uppercase;margin-bottom:16px;">Prazo de vencimento de autorização por convênio</div>
+      <div style="font-size:12.5px;color:var(--text2);margin-bottom:16px;line-height:1.7;">
+        Após autorizado, o convênio tem um prazo para o procedimento ser realizado. Quando esse prazo estiver próximo de vencer o sistema alerta. Padrão: 30 dias.
+      </div>
+      <div id="config-convenios"><div class="empty" style="padding:20px;">Carregando convênios...</div></div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:500;margin-bottom:10px;">Adicionar convênio manualmente</div>
+        <div class="flex" style="gap:8px;">
+          <input id="cfg-conv-nome" class="search-box" style="margin:0;flex:1;" placeholder="Nome do convênio">
+          <input id="cfg-conv-dias" class="search-box" style="margin:0;width:100px;" type="number" placeholder="Dias" value="30">
+          <button class="btn btn-cyan" onclick="salvarPrazoConvenio()">Salvar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:700px;margin-bottom:16px;">
+      <div style="font-size:10px;font-family:var(--mono);letter-spacing:.12em;color:var(--cyan);text-transform:uppercase;margin-bottom:16px;">Aprendizado automático — prazo médio real por convênio</div>
+      <div style="font-size:12.5px;color:var(--text2);margin-bottom:16px;line-height:1.7;">
+        Calculado automaticamente com base no histórico de importações. Outliers removidos pelo método IQR. Usado pelo radar de riscos para identificar convênios que costumam atrasar.
+      </div>
+      <div id="config-aprendizado"><div class="empty" style="padding:20px;">Carregando análise...</div></div>
+      <button class="btn btn-outline mt-12" onclick="calcularAprendizado()">↺ Recalcular agora</button>
+    </div>
+
+    <div class="card" style="max-width:700px;">
+      <div style="font-size:10px;font-family:var(--mono);letter-spacing:.12em;color:var(--cyan);text-transform:uppercase;margin-bottom:16px;">Email de alertas</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:8px;">Destinatário configurado</div>
+      <div style="font-size:14px;font-weight:600;color:var(--cyan);font-family:var(--mono);">atos.freitas@hospitalregina.com.br</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:8px;">Alertas disparados automaticamente a cada importação e manualmente pelo radar de riscos.</div>
+    </div>
+  </div>
+
+  <!-- IMPORTAR -->
+  <div id="page-importar" class="page">
+    <div class="section-head">
+      <div class="section-eyebrow">módulo 04</div>
+      <div class="section-title">Importar planilha</div>
+      <div class="section-sub">Atualize todos os painéis com o arquivo semanal</div>
+    </div>
+    <div class="card" style="max-width:600px;">
+      <div class="upload-zone" id="drop-zone"
+           onclick="document.getElementById('file-input').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <span class="upload-icon">⬆</span>
+        <div class="upload-title">Arraste o arquivo Excel aqui</div>
+        <div class="upload-sub">ou clique para selecionar · formato .xlsx</div>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this.files[0])">
+      <div class="progress-bar" id="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div id="import-status" style="margin-top:14px;font-size:13px;color:var(--text2);font-family:var(--mono);"></div>
+    </div>
+
+    <div class="card" style="max-width:600px;margin-top:0;">
+      <div style="font-size:11px;font-family:var(--mono);letter-spacing:.1em;color:var(--cyan);text-transform:uppercase;margin-bottom:12px;">Como funciona</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.9;">
+        O arquivo é lido diretamente no navegador — nenhum dado clínico é enviado a servidores externos.<br>
+        O histórico de presença semanal de cada paciente é salvo no Firebase do setor.<br>
+        Após importar, todos os módulos são atualizados automaticamente.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">Detalhe do processo</div>
+        <div class="modal-title" id="modal-nome">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
 </div>
 
 <!-- TOAST -->
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast">
+  <div class="toast-dot" id="toast-dot"></div>
+  <span id="toast-msg"></span>
+</div>
 
-<script>
-/* ── PARTÍCULAS ── */
-(function(){
-  var c=document.getElementById('canvas-bg');
-  var ctx=c.getContext('2d');
-  var W,H,pts=[];
-  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;}
-  resize();window.addEventListener('resize',resize);
-  for(var i=0;i<60;i++){pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,r:Math.random()*1.5+.5,o:Math.random()*.5+.1});}
-  function draw(){
-    ctx.clearRect(0,0,W,H);
-    pts.forEach(function(p){
-      p.x+=p.vx;p.y+=p.vy;
-      if(p.x<0)p.x=W;if(p.x>W)p.x=0;
-      if(p.y<0)p.y=H;if(p.y>H)p.y=0;
-      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-      ctx.fillStyle='rgba(108,99,255,'+p.o+')';ctx.fill();
-    });
-    pts.forEach(function(a,i){pts.slice(i+1).forEach(function(b){
-      var d=Math.hypot(a.x-b.x,a.y-b.y);
-      if(d<120){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
-      ctx.strokeStyle='rgba(108,99,255,'+(0.08*(1-d/120))+')';ctx.lineWidth=.5;ctx.stroke();}
-    });});
-    requestAnimationFrame(draw);
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, getDocs, query, where, deleteDoc, Timestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const FB = {
+  apiKey:"AIzaSyCaNePk3g0JZCQctFxBjwLPVjVI2Qiw0c8",
+  authDomain:"autorizacoes-setor.firebaseapp.com",
+  projectId:"autorizacoes-setor",
+  storageBucket:"autorizacoes-setor.firebasestorage.app",
+  messagingSenderId:"920935018060",
+  appId:"1:920935018060:web:6d41a89d8cd6d5c246cee9"
+};
+const app = initializeApp(FB);
+const db  = getFirestore(app);
+
+// ── Audio Engine ─────────────────────────────────────────────────────────────
+const AC = new (window.AudioContext || window.webkitAudioContext)();
+
+function playTone(freq, type, dur, vol=0.15, decay=0.1) {
+  const o = AC.createOscillator();
+  const g = AC.createGain();
+  o.connect(g); g.connect(AC.destination);
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+  o.start(); o.stop(AC.currentTime + dur);
+}
+function sndClick()   { playTone(880, 'sine', 0.06, 0.08); }
+function sndNav()     { playTone(660, 'sine', 0.12, 0.1); setTimeout(()=>playTone(880,'sine',0.1,0.07),80); }
+function sndAlert()   { playTone(440,'square',0.08,0.05); setTimeout(()=>playTone(440,'square',0.08,0.05),120); setTimeout(()=>playTone(550,'square',0.12,0.07),240); }
+function sndSuccess() { playTone(660,'sine',0.1,0.08); setTimeout(()=>playTone(880,'sine',0.1,0.08),100); setTimeout(()=>playTone(1100,'sine',0.15,0.1),200); }
+function sndOpen()    { playTone(1100,'sine',0.08,0.06); }
+function resumeAC()   { if(AC.state==='suspended') AC.resume(); }
+
+// ── Clock ────────────────────────────────────────────────────────────────────
+function updateClock(){
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('pt-BR');
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ── Utils ────────────────────────────────────────────────────────────────────
+const PAGE_LABELS = {agenda:'Agenda cirúrgica', painel:'Painel de fases', historico:'Filas de autorização', riscos:'Radar de riscos', relatorio:'Relatório estratégico', config:'Configurações', importar:'Importar planilha'};
+const FASES = [
+  {nome:'CADASTRADO',             cor:'#1565C0'},
+  {nome:'AGUARDANDO COTAÇÃO',     cor:'#F9A825'},
+  {nome:'SOLICITADO AUTORIZAÇÃO', cor:'#0D2F8A'},
+  {nome:'PENDÊNCIA MÉDICA',       cor:'#E65100'},
+  {nome:'COTAÇÃO FINALIZADA',     cor:'#6A1B9A'},
+  {nome:'AUTORIZADO',             cor:'#2E7D32'},
+];
+function fmtData(d){ if(!d) return '—'; const dt=d instanceof Date?d:new Date(d); return isNaN(dt)?'—':dt.toLocaleDateString('pt-BR'); }
+function hoje(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+function addDias(d,n){ const r=new Date(d); r.setDate(r.getDate()+n); return r; }
+function slugPac(n){ return (n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''); }
+function tc(s){ return s?s.toString().toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):'';}
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg, type='cyan'){
+  const t=document.getElementById('toast');
+  const colors={cyan:'#00E5FF',red:'#FF1744',green:'#00E676',amber:'#FFB300'};
+  document.getElementById('toast-dot').style.background = colors[type]||colors.cyan;
+  document.getElementById('toast-dot').style.boxShadow = `0 0 6px ${colors[type]||colors.cyan}`;
+  document.getElementById('toast-msg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+let allDados = [];
+
+// ── Navegação ────────────────────────────────────────────────────────────────
+window.showPage = function(id, btn) {
+  resumeAC(); sndNav();
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('topbar-page').textContent = PAGE_LABELS[id]||id;
+  if(btn) btn.classList.add('active');
+  if(id==='agenda')    loadAgenda();
+  if(id==='painel')    renderPainel();
+  if(id==='historico') loadHistorico();
+  if(id==='riscos')    loadRiscos();
+  if(id==='relatorio') initRelatorio();
+  if(id==='config')    loadConfig();
+};
+
+// ── Importar ─────────────────────────────────────────────────────────────────
+window.handleDrop = function(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const f=e.dataTransfer.files[0]; if(f) handleFile(f);
+};
+window.handleFile = async function(file){
+  if(!file) return;
+  resumeAC();
+  const status = document.getElementById('import-status');
+  const bar    = document.getElementById('progress-bar');
+  const fill   = document.getElementById('progress-fill');
+  status.innerHTML='<span style="color:var(--cyan)">Lendo arquivo...</span>';
+  bar.style.display='block'; fill.style.width='15%';
+
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      fill.style.width='40%';
+      const wb   = XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws,{defval:'',range:1});
+      const semana = new Date().toISOString().substring(0,10);
+      const H60 = addDias(hoje(),60);
+      allDados = [];
+      fill.style.width='65%';
+
+      for(const r of rows){
+        const nome   = (r['Paciente']||r['paciente']||'').toString().trim();
+        if(!nome) continue;
+        const sala   = (r['Sala']||'').toString().trim().toUpperCase();
+        const salaReal = !['SALA VIRTUAL','-',''].includes(sala);
+        const dtAg   = r['Data agendada'] instanceof Date ? r['Data agendada'] : null;
+        const dtPed  = r['Data pedido']   instanceof Date ? r['Data pedido']   : null;
+        const fase   = (r['Fase']||'').toString().trim().toUpperCase();
+        const conv   = (r['Convênio']||r['Convenio']||'').toString().trim();
+        const medico = (r['Medico']||r['Médico']||'').toString().trim();
+        const opme   = ['sim','s','yes','1'].includes((r['Possui OPME?']||'').toString().trim().toLowerCase())?'Sim':'Não';
+        const slaDias= dtPed ? Math.floor((new Date()-dtPed)/(1000*60*60*24)) : 0;
+        const dtFase = r['Data fase workflow'] instanceof Date ? r['Data fase workflow'] : null;
+        const diasAutorizado = (fase==='AUTORIZADO' && dtFase) ? Math.floor((new Date()-dtFase)/(1000*60*60*24)) : null;
+        const ate60  = dtAg && dtAg >= hoje() && dtAg <= H60;
+        const prio   = salaReal && ate60 ? 1 : ate60 ? 2 : 3;
+
+        const item = {nome,medico,convenio:conv,dtAgendada:dtAg,dtPedido:dtPed,fase,opme,slaDias,salaReal,ate60,prio,sala,dtFase,diasAutorizado};
+        allDados.push(item);
+
+        await setDoc(doc(db,'historico',`${slugPac(nome)}_${semana}`),{
+          paciente:nome, semana, fase, slaDias,
+          dtAgendada: dtAg  ? Timestamp.fromDate(dtAg)  : null,
+          dtPedido:   dtPed ? Timestamp.fromDate(dtPed) : null,
+          dtFase:     dtFase? Timestamp.fromDate(dtFase): null,
+          diasAutorizado: diasAutorizado ?? null,
+          salaReal, opme, convenio:conv, medico,
+          importadoEm: Timestamp.now()
+        },{merge:true});
+      }
+
+      fill.style.width='100%';
+      setTimeout(()=>{ bar.style.display='none'; fill.style.width='0%'; },600);
+      status.innerHTML=`<span style="color:var(--green)">✓ ${allDados.length} processos importados com sucesso.</span>`;
+      sndSuccess();
+      toast(`${allDados.length} processos importados`, 'green');
+      enviarEmailAlertas();
+    } catch(err) {
+      status.innerHTML=`<span style="color:var(--red)">Erro: ${err.message}</span>`;
+      toast('Erro ao importar arquivo', 'red');
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+};
+
+// ── Agenda ───────────────────────────────────────────────────────────────────
+window.loadAgenda = function(){
+  const el = document.getElementById('agenda-content');
+  const sg = document.getElementById('agenda-stats');
+  if(!allDados.length){
+    sg.innerHTML='';
+    el.innerHTML='<div class="empty"><span class="empty-icon">📋</span>Importe uma planilha para ver a agenda.</div>';
+    return;
   }
-  draw();
-})();
+  const h = hoje(), amanha = addDias(h,1), fim = addDias(h,21);
+  const comData = allDados.filter(d=>d.dtAgendada && d.dtAgendada>=amanha && d.dtAgendada<=fim);
+  const pendTotal = comData.filter(d=>d.prio<=2).length;
+  const criticos  = comData.filter(d=>d.prio===1).length;
 
-/* ── UI ── */
-var fileInput=document.getElementById('fileInput');
-var dropZone=document.getElementById('dropZone');
-var fileInfo=document.getElementById('fileInfo');
-var btnAnalyze=document.getElementById('btnAnalyze');
-var btnNew=document.getElementById('btnNew');
-var loading=document.getElementById('loading');
-var results=document.getElementById('results');
-var currentFile=null;
+  // Stats
+  sg.innerHTML=`
+    <div class="stat-card red"><div class="stat-num red">${criticos}</div><div class="stat-lbl">críticos (sala+60d)</div></div>
+    <div class="stat-card amber"><div class="stat-num amber">${comData.filter(d=>d.prio===2).length}</div><div class="stat-lbl">até 60 dias</div></div>
+    <div class="stat-card cyan"><div class="stat-num cyan">${comData.length}</div><div class="stat-lbl">agendados 3 semanas</div></div>
+    <div class="stat-card ${pendTotal>0?'red':'green'}"><div class="stat-num ${pendTotal>0?'red':'green'}">${pendTotal}</div><div class="stat-lbl">pendentes autorização</div></div>
+  `;
 
-dropZone.addEventListener('click',function(){fileInput.click();});
-dropZone.addEventListener('dragover',function(e){e.preventDefault();dropZone.classList.add('drag-over');});
-dropZone.addEventListener('dragleave',function(){dropZone.classList.remove('drag-over');});
-dropZone.addEventListener('drop',function(e){
-  e.preventDefault();dropZone.classList.remove('drag-over');
-  var f=e.dataTransfer.files[0];
-  if(f&&f.type==='application/pdf')setFile(f);else showToast('⚠️ Por favor, selecione um arquivo PDF');
-});
-fileInput.addEventListener('change',function(){if(fileInput.files[0])setFile(fileInput.files[0]);});
-document.getElementById('removeFile').addEventListener('click',resetFile);
-btnNew.addEventListener('click',resetFile);
-btnAnalyze.addEventListener('click',analyzeFile);
+  const porDia = {};
+  comData.forEach(d=>{ const k=d.dtAgendada.toISOString().substring(0,10); if(!porDia[k])porDia[k]=[]; porDia[k].push(d); });
+  const dias = Object.keys(porDia).sort();
+  const amanhaKey = amanha.toISOString().substring(0,10);
 
-function setFile(f){
-  currentFile=f;
-  document.getElementById('fileName').textContent=f.name;
-  document.getElementById('fileSize').textContent=formatSize(f.size);
-  fileInfo.classList.add('show');
-  dropZone.style.display='none';
-  btnAnalyze.style.display='inline-flex';
-  results.classList.remove('show');
-  document.getElementById('statsGrid').innerHTML='';
-  document.getElementById('cardsContainer').innerHTML='';
-}
+  let html = '';
 
-function resetFile(){
-  currentFile=null;fileInput.value='';
-  fileInfo.classList.remove('show');
-  dropZone.style.display='block';
-  btnAnalyze.style.display='none';
-  btnNew.style.display='none';
-  results.classList.remove('show');
-  loading.classList.remove('show');
-  document.getElementById('statsGrid').innerHTML='';
-  document.getElementById('cardsContainer').innerHTML='';
-}
-
-function formatSize(b){return b>1048576?(b/1048576).toFixed(1)+' MB':(b/1024).toFixed(0)+' KB';}
-
-function showToast(msg,dur){
-  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
-  setTimeout(function(){t.classList.remove('show');},dur||3000);
-}
-
-var loaderMsgs=['Lendo o mapa cirúrgico','Identificando procedimentos','Verificando OPMEs','Classificando materiais','Finalizando análise'];
-var loaderIdx=0,loaderTimer=null;
-function startLoaderCycle(){
-  document.getElementById('loaderMsg').textContent=loaderMsgs[0];loaderIdx=1;
-  loaderTimer=setInterval(function(){
-    document.getElementById('loaderMsg').textContent=loaderMsgs[loaderIdx%loaderMsgs.length];loaderIdx++;
-  },2200);
-}
-function stopLoaderCycle(){clearInterval(loaderTimer);}
-
-async function extractTextFromPDF(file){
-  return new Promise(function(resolve,reject){
-    var script=document.createElement('script');
-    script.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload=async function(){
-      try{
-        pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        var arrayBuffer=await file.arrayBuffer();
-        var pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
-        var fullText='';
-        for(var i=1;i<=pdf.numPages;i++){
-          var page=await pdf.getPage(i);
-          var tc=await page.getTextContent();
-          var pageText=tc.items.map(function(it){return it.str;}).join(' ');
-          fullText+='--- PÁGINA '+i+' ---\n'+pageText+'\n';
-        }
-        resolve(fullText);
-      }catch(err){reject(err);}
-    };
-    script.onerror=function(){reject(new Error('Falha ao carregar PDF.js'));};
-    document.head.appendChild(script);
-  });
-}
-
-async function analyzeFile(){
-  if(!currentFile)return;
-  loading.classList.add('show');
-  btnAnalyze.style.display='none';
-  results.classList.remove('show');
-  startLoaderCycle();
-
-  try{
-    var textoExtraido=await extractTextFromPDF(currentFile);
-
-    var prompt='Você é um especialista em faturamento hospitalar e OPME (Órteses, Próteses e Materiais Especiais).\n\nAnalise o texto abaixo extraído de um Mapa Cirúrgico e retorne APENAS um JSON válido (sem texto, sem markdown, sem blocos de código) seguindo exatamente esta estrutura:\n\n{\n  "data_cirurgia": "DD/MM/AAAA",\n  "total_procedimentos": número,\n  "total_com_opme": número,\n  "total_sem_opme": número,\n  "pacientes": [\n    {\n      "nome": "PACIENTE 1",\n      "idade": "ex: 47a",\n      "sexo": "M ou F",\n      "convenio": "nome do convênio",\n      "medico": "MÉDICO RESPONSÁVEL",\n      "sala": "SALA X",\n      "horario": "HH:MM – HH:MM",\n      "procedimentos": [\n        {\n          "codigo": "código AMB ou TUSS",\n          "nome": "nome completo do procedimento",\n          "qtd_solic": número,\n          "qtd_aut": número ou null,\n          "principal": true ou false\n        }\n      ],\n      "opme": [\n        {\n          "nome": "nome do material/implante",\n          "ref": "referência se disponível ou null",\n          "fornecedor": "nome ou null",\n          "qtd_sol": número,\n          "qtd_aut": número ou null,\n          "status": "PENDENTE" ou "AUTORIZADO" ou "PARTICULAR"\n        }\n      ],\n      "tem_opme": true ou false,\n      "cti": false,\n      "internado": false,\n      "observacoes": "observações clínicas relevantes ou null"\n    }\n  ]\n}\n\nRegras CRÍTICAS de privacidade — OBRIGATÓRIAS:\n- NUNCA use o nome real do paciente — use sempre "PACIENTE 1", "PACIENTE 2", etc.\n- NUNCA use o nome real do médico — use sempre "MÉDICO RESPONSÁVEL"\n- NUNCA inclua CPF, telefone, matrícula, data de nascimento ou qualquer dado pessoal\n- Se houver "OPME PENDENTE" como nome, mantenha e marque status como "PENDENTE"\n- Materiais particulares (não pelo convênio) marquem status como "PARTICULAR"\n- Se o campo qtd_aut não estiver disponível, use null\n- Inclua TODOS os pacientes do mapa, com ou sem OPME\n- Se não houver OPME, retorne "opme": [] e "tem_opme": false\n- Retorne SOMENTE o JSON, nada mais\n\nTEXTO DO MAPA CIRÚRGICO:\n'+textoExtraido;
-
-    var response=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:4000,
-        messages:[{role:'user',content:prompt}]
-      })
-    });
-    var data=await response.json();
-    var raw=data.content.map(function(b){return b.text||'';}).join('');
-    var clean=raw.replace(/```json|```/g,'').trim();
-    var json=JSON.parse(clean);
-    stopLoaderCycle();
-    loading.classList.remove('show');
-    renderResults(json);
-    btnNew.style.display='inline-flex';
-  }catch(e){
-    stopLoaderCycle();
-    loading.classList.remove('show');
-    btnAnalyze.style.display='inline-flex';
-    showToast('❌ Erro ao analisar: '+e.message,5000);
-    console.error(e);
+  // AMANHÃ
+  const adList = porDia[amanhaKey]||[];
+  if(adList.length) {
+    const pend = adList.filter(d=>d.prio<=2).length;
+    if(pend>0) sndAlert();
+    const cor = pend>0?'var(--red)':'var(--green)';
+    const aLabel = amanha.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'});
+    html += `<div class="alert-${pend>0?'critical':'ok'}" style="position:relative;">
+      <div class="alert-title" style="color:${cor}">
+        ${pend>0?'⚠':'✓'} Amanhã — ${aLabel} — ${adList.length} cirurgia${adList.length>1?'s':''}
+        <span style="margin-left:auto;" class="badge ${pend>0?'badge-red':'badge-green'}">${pend>0?pend+' sem autorização':'todos autorizados'}</span>
+      </div>
+      <div class="alert-sub">${pend>0?'Atenção: verifique as autorizações antes do fim do dia.':'Nenhuma pendência para amanhã.'}</div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:20px;">
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Paciente</th><th>Médico</th><th>Convênio</th><th>OPME</th><th>SLA</th><th>Status</th></tr></thead>
+        <tbody>
+        ${adList.sort((a,b)=>a.prio-b.prio).map(d=>`
+          <tr class="clickable ${d.prio===1?'p1':d.prio===2?'p2':''}" onclick="abrirModal(${esc(d)})">
+            <td style="font-weight:600">${tc(d.nome)}</td>
+            <td style="color:var(--text2)">${tc(d.medico)||'—'}</td>
+            <td style="color:var(--text2)">${d.convenio||'—'}</td>
+            <td>${d.opme==='Sim'?'<span class="badge badge-red">Sim</span>':'<span class="badge badge-gray">Não</span>'}</td>
+            <td><span class="badge badge-gray">${d.slaDias}d</span></td>
+            <td>${d.salaReal?'<span class="badge badge-cyan">Sala confirmada</span>':'<span class="badge badge-amber">Sala virtual</span>'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  } else {
+    html += `<div class="alert-ok" style="position:relative;margin-bottom:20px;">
+      <div class="alert-title" style="color:var(--green)">✓ Amanhã sem cirurgias agendadas</div>
+    </div>`;
   }
-}
 
-function toBase64(file){
-  return new Promise(function(res,rej){
-    var r=new FileReader();
-    r.onload=function(){res(r.result.split(',')[1]);};
-    r.onerror=function(){rej(new Error('Falha ao ler arquivo'));};
-    r.readAsDataURL(file);
+  // PRÓXIMOS DIAS
+  html += `<div style="font-size:10px;font-family:var(--mono);letter-spacing:.12em;color:var(--cyan);text-transform:uppercase;margin-bottom:12px;opacity:.7;">Próximas 3 semanas</div>`;
+  dias.filter(k=>k!==amanhaKey).forEach(key=>{
+    const lista = porDia[key];
+    const dt    = new Date(key+'T12:00:00');
+    const label = dt.toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+    const pend  = lista.filter(d=>d.prio<=2).length;
+    html += `<div class="day-block">
+      <div class="day-header" onclick="toggleDay('db-${key}', this)">
+        <span class="day-label">${label.toUpperCase()}</span>
+        <span class="day-sub">${lista.length} cirurgia${lista.length>1?'s':''}</span>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+          <span class="badge ${pend>0?'badge-red':'badge-green'}">${pend>0?pend+' pendente'+(pend>1?'s':''):'ok'}</span>
+          <span class="day-chevron" id="chev-${key}">▾</span>
+        </div>
+      </div>
+      <div class="day-body" id="db-${key}">
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Paciente</th><th>Médico</th><th>OPME</th><th>SLA</th><th>Status</th></tr></thead>
+          <tbody>
+          ${lista.sort((a,b)=>a.prio-b.prio).map(d=>`
+            <tr class="clickable ${d.prio===1?'p1':d.prio===2?'p2':''}" onclick="abrirModal(${esc(d)})">
+              <td style="font-weight:600">${tc(d.nome)}</td>
+              <td style="color:var(--text2)">${tc(d.medico)||'—'}</td>
+              <td>${d.opme==='Sim'?'<span class="badge badge-red">Sim</span>':'<span class="badge badge-gray">Não</span>'}</td>
+              <td><span class="badge badge-gray">${d.slaDias}d</span></td>
+              <td>${d.salaReal?'<span class="badge badge-cyan">Confirmada</span>':'<span class="badge badge-amber">Virtual</span>'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table></div>
+      </div>
+    </div>`;
   });
-}
 
-function renderResults(data){
-  results.classList.add('show');
+  if(!dias.length) html='<div class="empty"><span class="empty-icon">✓</span>Nenhum agendamento nas próximas 3 semanas.</div>';
+  el.innerHTML = html;
+};
 
-  /* STATS */
-  var sg=document.getElementById('statsGrid');
-  sg.innerHTML='';
-  var stats=[
-    {n:data.total_procedimentos,label:'Procedimentos',cls:'accent'},
-    {n:data.total_com_opme,label:'Com OPME',cls:'danger'},
-    {n:data.total_sem_opme,label:'Sem OPME',cls:'success'},
-    {n:data.pacientes?data.pacientes.length:0,label:'Pacientes',cls:'warning'}
+window.toggleDay = function(id, hdr) {
+  resumeAC(); sndClick();
+  const body = document.getElementById(id);
+  const chev = document.getElementById('chev-'+id.replace('db-',''));
+  if(!body) return;
+  const isOpen = body.classList.toggle('open');
+  if(chev) chev.classList.toggle('open', isOpen);
+};
+
+// ── Painel ───────────────────────────────────────────────────────────────────
+window.renderPainel = function(){
+  if(!allDados.length){ document.getElementById('painel-content').innerHTML='<div class="empty"><span class="empty-icon">⚡</span>Aguardando importação.</div>'; return; }
+  let html='';
+  FASES.forEach((f,fi)=>{
+    const dados = allDados.filter(d=>d.fase===f.nome);
+    if(!dados.length) return;
+    const g1=[...dados.filter(d=>d.prio===1)].sort((a,b)=>a.dtAgendada-b.dtAgendada);
+    const g2=[...dados.filter(d=>d.prio===2)].sort((a,b)=>a.dtAgendada-b.dtAgendada);
+    const g3=[...dados.filter(d=>d.prio===3)].sort((a,b)=>a.dtPedido-b.dtPedido);
+    const sorted=[...g1,...g2,...g3];
+    html+=`<div class="card" style="padding:0;overflow:hidden;">
+      <div class="fase-bar" style="background:${f.cor}22;border-bottom:1px solid ${f.cor}44;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${f.cor};box-shadow:0 0 8px ${f.cor};flex-shrink:0;"></span>
+        <span style="color:${f.cor};letter-spacing:.06em;">${f.nome}</span>
+        <span style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+          <span class="badge badge-red">${g1.length} críticos</span>
+          <span class="badge badge-amber">${g2.length} até 60d</span>
+          <span class="badge badge-gray">${dados.length} total</span>
+          <button class="btn btn-cyan" style="padding:5px 14px;font-size:12px;" onclick="gerarPDFFase(${fi})">
+            <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Imprimir folha
+          </button>
+        </span>
+      </div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Paciente</th><th>Convênio</th><th>Dt. Agenda</th><th>Dt. Pedido</th><th>SLA</th><th>OPME</th></tr></thead>
+        <tbody>
+        ${sorted.map(d=>`
+          <tr class="clickable ${d.prio===1?'p1':d.prio===2?'p2':''}" onclick="abrirModal(${esc(d)})">
+            <td style="font-weight:600">${tc(d.nome)}</td>
+            <td style="color:var(--text2)">${d.convenio||'—'}</td>
+            <td>${fmtData(d.dtAgendada)}</td>
+            <td>${fmtData(d.dtPedido)}</td>
+            <td><span class="badge badge-gray">${d.slaDias} dias</span></td>
+            <td>${d.opme==='Sim'?'<span class="badge badge-red">Sim</span>':'<span class="badge badge-gray">Não</span>'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  });
+  document.getElementById('painel-content').innerHTML=html;
+};
+
+// ── Gerar PDF de uma fase ────────────────────────────────────────────────────
+window.gerarPDFFase = function(fi) {
+  resumeAC(); sndSuccess();
+  const f = FASES[fi];
+  const dados = allDados.filter(d=>d.fase===f.nome);
+  const g1=[...dados.filter(d=>d.prio===1)].sort((a,b)=>a.dtAgendada-b.dtAgendada);
+  const g2=[...dados.filter(d=>d.prio===2)].sort((a,b)=>a.dtAgendada-b.dtAgendada);
+  const g3=[...dados.filter(d=>d.prio===3)].sort((a,b)=>a.dtPedido-b.dtPedido);
+  const sorted=[...g1,...g2,...g3];
+
+  // Converte hex cor da fase para rgb
+  const hexToRgb = h => {
+    const r=parseInt(h.slice(1,3),16), g=parseInt(h.slice(3,5),16), b=parseInt(h.slice(5,7),16);
+    return [r,g,b];
+  };
+  const [cr,cg,cb] = hexToRgb(f.cor);
+  const luminancia = (0.299*cr + 0.587*cg + 0.114*cb)/255;
+  const textoClaro = luminancia < 0.55;
+
+  // ── Configurações de página A4 (pt) ──────────────────────────────────────
+  const PW=595, PH=842;
+  const MX=28, MY=20;
+  const TIT_H=70, LEG_H=18, HEAD_H=20;
+  const ROW_H=21;
+  const TW=PW-2*MX;
+
+  // Colunas: Paciente | Convênio | Dt.Agenda | SLA | OPME | STATUS
+  const COLS=[
+    {lbl:'PACIENTE',    w:TW*0.28},
+    {lbl:'CONVÊNIO',   w:TW*0.15},
+    {lbl:'DT. AGENDA', w:TW*0.11},
+    {lbl:'DT. PEDIDO', w:TW*0.11},
+    {lbl:'SLA',        w:TW*0.08},
+    {lbl:'OPME',       w:TW*0.06},
+    {lbl:'STATUS / OBSERVAÇÃO', w:TW*0.21},
   ];
-  stats.forEach(function(s,i){
-    var d=document.createElement('div');
-    d.className='stat-card '+s.cls;
-    d.style.animationDelay=(i*0.08)+'s';
-    d.innerHTML='<div class="stat-number">'+s.n+'</div><div class="stat-label">'+s.label+'</div>';
-    sg.appendChild(d);
-  });
+  COLS[COLS.length-1].w = TW - COLS.slice(0,-1).reduce((s,c)=>s+c.w,0);
 
-  /* CARDS PACIENTES */
-  var cc=document.getElementById('cardsContainer');
-  cc.innerHTML='';
-  var pacientes=data.pacientes||[];
-  if(!pacientes.length){
-    cc.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div>Nenhum paciente encontrado</div></div>';
+  const AREA_TOP = PH - TIT_H - LEG_H - HEAD_H - MY;
+  const AREA_BOT = 18;
+  const ROWS_FIT = Math.floor((AREA_TOP - AREA_BOT) / ROW_H);
+
+  // ── Montar HTML para impressão ────────────────────────────────────────────
+  const hoje_ = new Date(); hoje_.setHours(0,0,0,0);
+  const dataStr = hoje_.toLocaleDateString('pt-BR');
+  const exib = sorted.slice(0, ROWS_FIT);
+
+  const corFundo = f.cor;
+  const corTexto = textoClaro ? '#FFFFFF' : '#1A1A1A';
+  // versão clara da cor para sub-header
+  const corLight = `rgba(${cr},${cg},${cb},0.12)`;
+  const corBorder = `rgba(${cr},${cg},${cb},0.3)`;
+
+  // cores de linha por prioridade
+  function rowBg(d, i) {
+    if(d.prio===1) return '#FFF5F5';
+    if(d.prio===2) return '#FFFEF0';
+    return i%2===0 ? '#F7F8FA' : '#FFFFFF';
+  }
+
+  const colsHead = COLS.map(c=>`<th style="width:${c.w}pt;padding:4px 5px;font-size:7.5pt;font-weight:700;text-align:left;border-right:0.5px solid ${corBorder};background:${corLight};color:#1A1A1A;letter-spacing:.04em;">${c.lbl}</th>`).join('');
+
+  const rows = exib.map((d,i)=>{
+    const vals=[
+      tc(d.nome),
+      (d.convenio||'—').substring(0,20),
+      fmtData(d.dtAgendada),
+      fmtData(d.dtPedido),
+      d.slaDias+' dias',
+      d.opme==='Sim'?'Sim':'Não',
+      '',
+    ];
+    const bg = rowBg(d,i);
+    const dot = d.prio===1?'#FF1744': d.prio===2?'#FFB300':'transparent';
+    return `<tr style="background:${bg};">
+      ${vals.map((v,vi)=>{
+        const isStatus = vi===vals.length-1;
+        const isFirst  = vi===0;
+        return `<td style="padding:4px 5px;font-size:8pt;border-right:${isStatus?'0.8px':'0.4px'} solid #CCC;border-bottom:0.4px solid #DDD;vertical-align:middle;${isFirst?'font-weight:600;':'color:#333;'}${isStatus?'border-left:2px solid '+corBorder+';':''}">${isFirst?`<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dot};margin-right:4px;vertical-align:middle;"></span>`:''}${v}</td>`;
+      }).join('')}
+    </tr>`;
+  }).join('');
+
+  const p1cnt=g1.length, p2cnt=g2.length, total=sorted.length;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    @page { size: A4 portrait; margin: 0; }
+    * { box-sizing: border-box; margin:0; padding:0; font-family: 'Arial', sans-serif; }
+    body { width:595pt; }
+    .page { width:595pt; min-height:842pt; position:relative; background:#fff; }
+    .sidebar { position:absolute; left:0; top:0; bottom:0; width:5pt; background:${corFundo}; }
+    .tit-block { background:${corFundo}; padding:14pt 18pt 10pt 22pt; }
+    .tit-nome { font-size:22pt; font-weight:700; color:${corTexto}; letter-spacing:.02em; }
+    .tit-info { font-size:8pt; color:${textoClaro?'rgba(255,255,255,0.75)':'rgba(0,0,0,0.55)'}; margin-top:4pt; }
+    .leg { background:#F0F0F0; padding:4pt 18pt 4pt 22pt; font-size:7pt; color:#555; display:flex; gap:20pt; align-items:center; }
+    .dot { display:inline-block; width:8pt; height:8pt; border-radius:50%; margin-right:3pt; vertical-align:middle; }
+    table { width:100%; border-collapse:collapse; margin:0 ${MX}pt; width:calc(100% - ${2*MX}pt); }
+    th { background:${corLight}; }
+    .rodape { position:absolute; bottom:6pt; left:${MX}pt; right:${MX}pt; font-size:7pt; color:#999; display:flex; justify-content:space-between; }
+    @media print { .no-print{display:none} }
+  </style></head><body>
+  <div class="page">
+    <div class="sidebar"></div>
+    <div class="tit-block">
+      <div class="tit-nome">${f.nome}</div>
+      <div class="tit-info">Total na fase: ${total} &nbsp;·&nbsp; 🔴 Sala+60d: ${p1cnt} &nbsp;·&nbsp; 🟡 Até 60d: ${p2cnt} &nbsp;·&nbsp; Gerado em ${dataStr} &nbsp;·&nbsp; Exibindo ${exib.length} de ${total}</div>
+    </div>
+    <div class="leg">
+      <span><span class="dot" style="background:#FF1744;"></span>Sala confirmada + até 60 dias</span>
+      <span><span class="dot" style="background:#FFB300;"></span>Até 60 dias</span>
+      <span><span class="dot" style="background:#DDD;"></span>Mais antigos por data do pedido</span>
+    </div>
+    <table style="margin:0 ${MX}pt;width:calc(100% - ${2*MX}pt);">
+      <thead><tr>${colsHead}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="rodape">
+      <span>Setor de Autorizações &nbsp;·&nbsp; Atualizado semanalmente</span>
+      <span>${exib.length} de ${total} processos</span>
+    </div>
+  </div>
+  <div class="no-print" style="text-align:center;padding:20px;">
+    <button onclick="window.print()" style="padding:10px 28px;background:${corFundo};color:${corTexto};border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;">
+      🖨 Imprimir / Salvar PDF
+    </button>
+  </div>
+  </body></html>`;
+
+  const win = window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  toast(`Abrindo folha: ${f.nome}`, 'cyan');
+};
+
+// ── Histórico ────────────────────────────────────────────────────────────────
+// ── Filas ────────────────────────────────────────────────────────────────────
+let filaAtiva = 'pendentes';
+let todoHistorico = [];
+
+window.loadHistorico = async function(){
+  document.getElementById('historico-content').innerHTML='<div class="empty"><span class="empty-icon">🕐</span>Carregando...</div>';
+  try {
+    // Usar dados em memória se disponíveis (mais rápido)
+    if(allDados.length){
+      todoHistorico = allDados;
+    } else {
+      // fallback: buscar do Firestore última semana
+      const snap = await getDocs(collection(db,'historico'));
+      const porChave = {};
+      snap.forEach(d=>{
+        const r=d.data();
+        const slug=slugPac(r.paciente);
+        if(!porChave[slug] || r.semana > porChave[slug].semana) porChave[slug]=r;
+      });
+      todoHistorico = Object.values(porChave).map(r=>({
+        nome:r.paciente, fase:r.fase, convenio:r.convenio, medico:r.medico,
+        dtAgendada: r.dtAgendada?.toDate?.()||null,
+        dtPedido:   r.dtPedido?.toDate?.()||null,
+        dtFase:     r.dtFase?.toDate?.()||null,
+        slaDias:r.slaDias, opme:r.opme, salaReal:r.salaReal,
+        diasAutorizado: r.diasAutorizado??null, prio:r.prio??3, ate60:false,
+      }));
+    }
+    mostrarFila(filaAtiva);
+  } catch(e) {
+    document.getElementById('historico-content').innerHTML=`<div class="empty">Erro: ${e.message}</div>`;
+  }
+};
+
+window.mostrarFila = function(qual){
+  filaAtiva = qual;
+  // atualizar botões
+  document.getElementById('fila-btn-pend').className = qual==='pendentes' ? 'btn btn-cyan' : 'btn btn-outline';
+  document.getElementById('fila-btn-aut').className  = qual==='autorizados'? 'btn btn-cyan' : 'btn btn-outline';
+  sndClick();
+  const q = document.getElementById('search-hist').value;
+  filtrarHistorico(q);
+};
+
+function renderHistorico(lista){
+  const el = document.getElementById('historico-content');
+  if(!lista.length){ el.innerHTML='<div class="empty"><span class="empty-icon">🕐</span>Nenhum registro encontrado.</div>'; return; }
+
+  if(filaAtiva==='pendentes'){
+    // Fases que NÃO são AUTORIZADO
+    const pend = lista.filter(d=>d.fase!=='AUTORIZADO')
+                      .sort((a,b)=>a.slaDias < b.slaDias ? 1 : -1); // mais antigos primeiro
+    if(!pend.length){ el.innerHTML='<div class="empty"><span class="empty-icon">✓</span>Nenhum pendente de autorização.</div>'; return; }
+
+    let html=`
+      <div style="font-size:11px;font-family:var(--mono);color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;opacity:.7;">
+        ${pend.length} paciente${pend.length>1?'s':''} pendentes de autorização — ordenados por SLA (mais antigo primeiro)
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;"><div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Paciente</th><th>Fase atual</th><th>Convênio</th><th>Dt. Pedido</th><th>SLA</th><th>OPME</th><th>Dt. Agenda</th>
+      </tr></thead><tbody>`;
+    pend.forEach(d=>{
+      const slaAlert = d.slaDias>=30?'badge-red': d.slaDias>=15?'badge-amber':'badge-gray';
+      html+=`<tr class="clickable ${d.prio===1?'p1':d.prio===2?'p2':''}" onclick="abrirModal(${esc(d)})">
+        <td style="font-weight:600">${tc(d.nome)}</td>
+        <td><span class="badge badge-gray" style="font-size:10px;">${d.fase}</span></td>
+        <td style="color:var(--text2)">${d.convenio||'—'}</td>
+        <td style="color:var(--text2)">${fmtData(d.dtPedido)}</td>
+        <td><span class="badge ${slaAlert}">${d.slaDias} dias</span></td>
+        <td>${d.opme==='Sim'?'<span class="badge badge-red">Sim</span>':'<span class="badge badge-gray">Não</span>'}</td>
+        <td>${fmtData(d.dtAgendada)}</td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div></div>`;
+    el.innerHTML=html;
+
+  } else {
+    // Fase AUTORIZADO — tempo desde dtFase
+    const aut = lista.filter(d=>d.fase==='AUTORIZADO')
+                     .sort((a,b)=>(b.diasAutorizado??0)-(a.diasAutorizado??0));
+    if(!aut.length){ el.innerHTML='<div class="empty"><span class="empty-icon">✓</span>Nenhum paciente na fase Autorizado.</div>'; return; }
+
+    let html=`
+      <div style="font-size:11px;font-family:var(--mono);color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;opacity:.7;">
+        ${aut.length} paciente${aut.length>1?'s':''} autorizados — ordenados por tempo aguardando procedimento
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;"><div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Paciente</th><th>Convênio</th><th>Médico</th><th>Dt. autorizado</th><th>Dias aguardando</th><th>OPME</th><th>Dt. Agenda</th>
+      </tr></thead><tbody>`;
+    aut.forEach(d=>{
+      const dias = d.diasAutorizado??'—';
+      const alert = typeof dias==='number' && dias>=14?'badge-red': typeof dias==='number' && dias>=7?'badge-amber':'badge-green';
+      const alertMsg = typeof dias==='number' && dias>=14
+        ? `<span class="badge badge-red" style="margin-left:6px;font-size:9px;">⚠ já deveria ter realizado</span>`
+        : '';
+      html+=`<tr class="clickable" onclick="abrirModal(${esc(d)})">
+        <td style="font-weight:600">${tc(d.nome)}${alertMsg}</td>
+        <td style="color:var(--text2)">${d.convenio||'—'}</td>
+        <td style="color:var(--text2)">${tc(d.medico)||'—'}</td>
+        <td style="color:var(--text2)">${fmtData(d.dtFase)}</td>
+        <td><span class="badge ${alert}">${dias} dias</span></td>
+        <td>${d.opme==='Sim'?'<span class="badge badge-red">Sim</span>':'<span class="badge badge-gray">Não</span>'}</td>
+        <td>${fmtData(d.dtAgendada)}</td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div></div>`;
+    el.innerHTML=html;
+  }
+}
+
+window.filtrarHistorico = function(q){
+  const filtrado = todoHistorico.filter(p=>p.nome.toLowerCase().includes(q.toLowerCase()));
+  renderHistorico(filtrado);
+};
+
+// ── Modal ────────────────────────────────────────────────────────────────────
+function esc(d){ return JSON.stringify(d).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+window.abrirModal = async function(d){
+  resumeAC(); sndOpen();
+  if(typeof d==='string') d=JSON.parse(d);
+  document.getElementById('modal-nome').textContent = tc(d.nome);
+  const prioHtml = d.prio===1?'<span class="badge badge-red">Sala confirmada + até 60 dias</span>':
+                   d.prio===2?'<span class="badge badge-amber">Até 60 dias</span>':
+                              '<span class="badge badge-gray">Fila geral</span>';
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-row"><span class="modal-lbl">Prioridade</span><span>${prioHtml}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Fase</span><span class="modal-val">${d.fase}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Médico</span><span class="modal-val">${tc(d.medico)||'—'}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Convênio</span><span class="modal-val">${d.convenio||'—'}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Dt. agendada</span><span class="modal-val">${fmtData(d.dtAgendada)}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Dt. pedido</span><span class="modal-val">${fmtData(d.dtPedido)}</span></div>
+    <div class="modal-row"><span class="modal-lbl">SLA</span><span class="modal-val">${d.slaDias} dias desde o pedido</span></div>
+    <div class="modal-row"><span class="modal-lbl">OPME</span><span class="modal-val">${d.opme}</span></div>
+    <div class="modal-row"><span class="modal-lbl">Sala</span><span class="modal-val">${d.sala||'—'}</span></div>
+    <div class="hist-sect">
+      <div class="hist-title">Histórico de presença</div>
+      <div id="modal-hist"><span style="color:var(--text2);font-size:12px;">Carregando...</span></div>
+    </div>`;
+  document.getElementById('modal-bg').classList.add('open');
+  try {
+    const snap = await getDocs(query(collection(db,'historico'),where('paciente','==',d.nome)));
+    let rows='';
+    const docs=[];
+    snap.forEach(doc=>docs.push(doc.data()));
+    docs.sort((a,b)=>b.semana.localeCompare(a.semana));
+    docs.forEach(r=>{ rows+=`<div class="hist-row"><span class="hist-week">${r.semana}</span><span>${r.fase}</span><span style="margin-left:auto;color:var(--text2);font-size:11px;font-family:var(--mono);">SLA ${r.slaDias}d</span></div>`; });
+    document.getElementById('modal-hist').innerHTML=rows||'<span style="color:var(--text2);font-size:12px;">Nenhum registro anterior.</span>';
+  } catch(e){ console.warn(e); }
+};
+window.closeModal = function(){ resumeAC(); sndClick(); document.getElementById('modal-bg').classList.remove('open'); };
+
+// ── Document click to resume audio ──────────────────────────────────────────
+// ── Relatório Estratégico ─────────────────────────────────────────────────────
+function initRelatorio(){
+  const ate = new Date(); ate.setHours(23,59,59,0);
+  const de  = new Date(); de.setMonth(de.getMonth()-3); de.setHours(0,0,0,0);
+  if(!document.getElementById('rel-de').value)
+    document.getElementById('rel-de').value  = de.toISOString().substring(0,10);
+  if(!document.getElementById('rel-ate').value)
+    document.getElementById('rel-ate').value = ate.toISOString().substring(0,10);
+}
+
+function medianaSemOutliers(vals){
+  if(!vals.length) return 0;
+  const s=[...vals].sort((a,b)=>a-b);
+  const q1=s[Math.floor(s.length*0.25)], q3=s[Math.floor(s.length*0.75)];
+  const iqr=q3-q1, lo=q1-1.5*iqr, hi=q3+1.5*iqr;
+  const limpos=s.filter(v=>v>=lo&&v<=hi);
+  if(!limpos.length) return Math.round(s[Math.floor(s.length/2)]);
+  return Math.round(limpos.reduce((a,b)=>a+b,0)/limpos.length);
+}
+
+window.gerarRelatorio = async function(){
+  resumeAC(); sndClick();
+  const de  = new Date(document.getElementById('rel-de').value +'T00:00:00');
+  const ate = new Date(document.getElementById('rel-ate').value+'T23:59:59');
+  if(isNaN(de)||isNaN(ate)){ toast('Selecione o período','red'); return; }
+
+  document.getElementById('relatorio-content').innerHTML=
+    '<div class="empty"><span class="empty-icon">⏳</span>Analisando dados...</div>';
+
+  // Buscar histórico do Firestore no período
+  let registros=[];
+  try{
+    const snap = await getDocs(collection(db,'historico'));
+    snap.forEach(d=>{
+      const r=d.data();
+      const imp = r.importadoEm?.toDate?.()??null;
+      if(imp && imp>=de && imp<=ate) registros.push(r);
+    });
+  } catch(e){ toast('Erro ao buscar dados','red'); return; }
+
+  // Complementar com allDados se período inclui hoje
+  if(ate>=new Date() && allDados.length){
+    allDados.forEach(d=>{
+      if(!registros.find(r=>slugPac(r.paciente)===slugPac(d.nome)))
+        registros.push({paciente:d.nome,fase:d.fase,convenio:d.convenio,medico:d.medico,
+          slaDias:d.slaDias,opme:d.opme,dtPedido:d.dtPedido,dtAgendada:d.dtAgendada});
+    });
+  }
+
+  if(!registros.length){
+    document.getElementById('relatorio-content').innerHTML=
+      '<div class="empty"><span class="empty-icon">📊</span>Nenhum dado no período selecionado.</div>';
     return;
   }
 
-  /* Ordena: com OPME primeiro */
-  pacientes.sort(function(a,b){return (b.tem_opme?1:0)-(a.tem_opme?1:0);});
+  // ── Análises ──────────────────────────────────────────────────────────────
+  const total      = registros.length;
+  const comOpme    = registros.filter(r=>r.opme==='Sim');
+  const semOpme    = registros.filter(r=>r.opme!=='Sim');
+  const autorizados= registros.filter(r=>r.fase==='AUTORIZADO');
+  const taxaAut    = total ? Math.round(autorizados.length/total*100) : 0;
+  const slaGeral   = medianaSemOutliers(registros.map(r=>r.slaDias||0));
+  const slaOpme    = medianaSemOutliers(comOpme.map(r=>r.slaDias||0));
+  const slaSemOpme = medianaSemOutliers(semOpme.map(r=>r.slaDias||0));
 
-  pacientes.forEach(function(p,i){
-    var card=document.createElement('div');
-    card.className='patient-card';
-    card.style.animationDelay=(i*0.07)+'s';
-
-    var sexoLabel=p.sexo==='F'?'Feminino':p.sexo==='M'?'Masculino':(p.sexo||'');
-    var badgeHtml=p.tem_opme?'<span class="badge-opme">⚠ OPME</span>':'<span class="badge-ok">✓ Sem OPME</span>';
-
-    /* OPME pendentes? */
-    var hasPending=(p.opme||[]).some(function(o){return o.status==='PENDENTE';});
-    if(hasPending)badgeHtml='<span class="badge-pending">⏳ OPME Pendente</span>';
-
-    /* HEADER */
-    card.innerHTML=`
-      <div class="card-header">
-        <div class="patient-info">
-          <div class="patient-name">${esc(p.nome||'Paciente')}</div>
-          <div class="patient-meta">
-            ${p.idade?`<span class="meta-chip">🎂 ${esc(p.idade)}</span>`:''}
-            ${sexoLabel?`<span class="meta-chip">${p.sexo==='F'?'♀':'♂'} ${sexoLabel}</span>`:''}
-            ${p.convenio?`<span class="meta-chip">🏥 ${esc(p.convenio)}</span>`:''}
-            ${p.sala?`<span class="meta-chip">🚪 ${esc(p.sala)}</span>`:''}
-            ${p.horario?`<span class="meta-chip">⏰ ${esc(p.horario)}</span>`:''}
-          </div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
-          ${badgeHtml}
-          <span class="chevron">⌄</span>
-        </div>
-      </div>
-      <div class="card-body"><div class="card-body-inner" id="body-${i}"></div></div>
-    `;
-
-    var header=card.querySelector('.card-header');
-    header.addEventListener('click',function(){
-      card.classList.toggle('open');
-      if(card.classList.contains('open'))buildBody(p,card.querySelector('.card-body-inner'));
-    });
-
-    cc.appendChild(card);
-
-    /* Auto-abre se tem OPME */
-    if(p.tem_opme){
-      setTimeout(function(){
-        card.classList.add('open');
-        buildBody(p,card.querySelector('.card-body-inner'));
-      },(i*70)+300);
-    }
+  // Por convênio
+  const porConv={};
+  registros.forEach(r=>{
+    const c=(r.convenio||'Não informado').trim();
+    if(!porConv[c]) porConv[c]={nome:c,total:0,opme:0,semOpme:0,slasOpme:[],slasSemOpme:[],slas:[]};
+    porConv[c].total++;
+    porConv[c].slas.push(r.slaDias||0);
+    if(r.opme==='Sim'){porConv[c].opme++;porConv[c].slasOpme.push(r.slaDias||0);}
+    else{porConv[c].semOpme++;porConv[c].slasSemOpme.push(r.slaDias||0);}
   });
+  const convList = Object.values(porConv).map(c=>({
+    ...c,
+    mediaGeral:  medianaSemOutliers(c.slas),
+    mediaOpme:   medianaSemOutliers(c.slasOpme),
+    mediaSemOpme:medianaSemOutliers(c.slasSemOpme),
+  })).sort((a,b)=>b.total-a.total);
+  const convMaisRapido  = [...convList].sort((a,b)=>a.mediaGeral-b.mediaGeral)[0];
+  const convMaisDemorado= [...convList].sort((a,b)=>b.mediaGeral-a.mediaGeral)[0];
+  const convMaisUsado   = convList[0];
+  // Melhor parceiro = volume alto + SLA baixo
+  const melhorParceiro = [...convList]
+    .filter(c=>c.total>=3)
+    .sort((a,b)=>(a.mediaGeral/Math.log(b.total+1))-(b.mediaGeral/Math.log(a.total+1)))[0];
+
+  // Por médico
+  const porMed={};
+  registros.forEach(r=>{
+    const m=(r.medico||'Não informado').trim();
+    if(!porMed[m]) porMed[m]={nome:m,total:0,opme:0,semOpme:0,slas:[]};
+    porMed[m].total++; porMed[m].slas.push(r.slaDias||0);
+    if(r.opme==='Sim') porMed[m].opme++; else porMed[m].semOpme++;
+  });
+  const medList = Object.values(porMed).map(m=>({
+    ...m, mediaSla:medianaSemOutliers(m.slas)
+  })).sort((a,b)=>b.total-a.total);
+  const medMaisEnvia  = medList[0];
+  const medMaisDemora = [...medList].filter(m=>m.total>=2).sort((a,b)=>b.mediaSla-a.mediaSla)[0];
+  const medMaisRapido = [...medList].filter(m=>m.total>=2).sort((a,b)=>a.mediaSla-b.mediaSla)[0];
+
+  // ── Insights IA ──────────────────────────────────────────────────────────
+  const insights=[];
+  if(convMaisDemorado && convMaisDemorado.mediaGeral > slaGeral*1.4)
+    insights.push({cor:'#FF1744', txt:`<b>${tc(convMaisDemorado.nome)}</b> está ${Math.round((convMaisDemorado.mediaGeral/slaGeral-1)*100)}% acima da média geral de prazo — recomenda-se contato comercial para revisão do fluxo de autorização.`});
+  if(convMaisRapido && convMaisRapido.mediaGeral < slaGeral*0.6)
+    insights.push({cor:'#00E676', txt:`<b>${tc(convMaisRapido.nome)}</b> autoriza em média ${convMaisRapido.mediaGeral} dias — benchmark interno. Modelo de relacionamento a ser replicado.`});
+  if(melhorParceiro)
+    insights.push({cor:'#00E5FF', txt:`<b>${tc(melhorParceiro.nome)}</b> combina alto volume (${melhorParceiro.total} pedidos) com prazo ágil (${melhorParceiro.mediaGeral}d) — parceiro estratégico prioritário.`});
+  if(medMaisEnvia && medMaisEnvia.opme/medMaisEnvia.total > 0.5)
+    insights.push({cor:'#FFB300', txt:`<b>${tc(medMaisEnvia.nome)}</b> concentra ${medMaisEnvia.total} pedidos, sendo ${medMaisEnvia.opme} com OPME (${Math.round(medMaisEnvia.opme/medMaisEnvia.total*100)}%). Avaliar fluxo dedicado para este médico.`});
+  if(slaOpme > slaSemOpme*1.3)
+    insights.push({cor:'#FFB300', txt:`Pedidos com OPME levam em média ${slaOpme-slaSemOpme} dias a mais para autorização. Processo de cotação OPME é gargalo operacional.`});
+  if(taxaAut < 40)
+    insights.push({cor:'#FF1744', txt:`Taxa de autorização de ${taxaAut}% no período está abaixo do esperado. Revisar pendências médicas e cotações em aberto.`});
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  const fmtPer = `${de.toLocaleDateString('pt-BR')} a ${ate.toLocaleDateString('pt-BR')}`;
+  window._relDados = {registros,convList,medList,insights,slaGeral,slaOpme,slaSemOpme,taxaAut,total,fmtPer,melhorParceiro,convMaisRapido,convMaisDemorado,medMaisEnvia,medMaisDemora};
+
+  const topConv = convList.slice(0,8);
+  const topMed  = medList.slice(0,8);
+
+  document.getElementById('relatorio-content').innerHTML=`
+    <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));margin-bottom:20px;">
+      <div class="stat-card cyan"><div class="stat-num cyan">${total}</div><div class="stat-lbl">total de pedidos</div></div>
+      <div class="stat-card cyan"><div class="stat-num cyan">${comOpme.length}</div><div class="stat-lbl">com OPME</div></div>
+      <div class="stat-card cyan"><div class="stat-num cyan">${semOpme.length}</div><div class="stat-lbl">sem OPME</div></div>
+      <div class="stat-card ${taxaAut>=60?'green':'red'}"><div class="stat-num ${taxaAut>=60?'green':'red'}">${taxaAut}%</div><div class="stat-lbl">taxa de autorização</div></div>
+      <div class="stat-card amber"><div class="stat-num amber">${slaGeral}d</div><div class="stat-lbl">SLA médio geral</div></div>
+      <div class="stat-card red"><div class="stat-num red">${slaOpme}d</div><div class="stat-lbl">SLA médio c/ OPME</div></div>
+      <div class="stat-card green"><div class="stat-num green">${slaSemOpme}d</div><div class="stat-lbl">SLA médio s/ OPME</div></div>
+    </div>
+
+    ${insights.length?`
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-size:10px;font-family:var(--mono);letter-spacing:.12em;color:var(--cyan);text-transform:uppercase;margin-bottom:14px;">⚡ Insights estratégicos</div>
+      ${insights.map(i=>`
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(0,229,255,.07);">
+          <div style="width:3px;min-height:36px;border-radius:2px;background:${i.cor};box-shadow:0 0 8px ${i.cor};flex-shrink:0;margin-top:2px;"></div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.6;">${i.txt}</div>
+        </div>`).join('')}
+    </div>`:''}
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:10px;font-family:var(--mono);letter-spacing:.1em;color:var(--cyan);text-transform:uppercase;">Convênios — volume e prazo</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Convênio</th><th>Pedidos</th><th>SLA geral</th><th>c/OPME</th><th>s/OPME</th></tr></thead>
+          <tbody>
+          ${topConv.map(c=>{
+            const bar=Math.min(Math.round(c.total/convList[0].total*100),100);
+            const cor=c.mediaGeral<=slaGeral?'var(--green)':c.mediaGeral<=slaGeral*1.3?'var(--amber)':'var(--red)';
+            return `<tr>
+              <td style="font-weight:600;font-size:12px;">${tc(c.nome)}</td>
+              <td><div style="display:flex;align-items:center;gap:6px;"><span style="font-family:var(--mono);font-size:12px;">${c.total}</span><div style="height:4px;width:${bar*0.6}px;background:var(--cyan-dim);border-radius:2px;"><div style="height:100%;width:${bar}%;background:var(--cyan);border-radius:2px;"></div></div></div></td>
+              <td><span style="font-family:var(--mono);font-size:12px;color:${cor};">${c.mediaGeral}d</span></td>
+              <td style="color:var(--text2);font-size:12px;">${c.mediaOpme||'—'}d</td>
+              <td style="color:var(--text2);font-size:12px;">${c.mediaSemOpme||'—'}d</td>
+            </tr>`;}).join('')}
+          </tbody>
+        </table></div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-size:10px;font-family:var(--mono);letter-spacing:.1em;color:var(--cyan);text-transform:uppercase;">Médicos — volume e prazo</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Médico</th><th>Pedidos</th><th>c/OPME</th><th>s/OPME</th><th>SLA médio</th></tr></thead>
+          <tbody>
+          ${topMed.map(m=>{
+            const cor=m.mediaSla<=slaGeral?'var(--green)':m.mediaSla<=slaGeral*1.3?'var(--amber)':'var(--red)';
+            return `<tr>
+              <td style="font-weight:600;font-size:12px;">${tc(m.nome)}</td>
+              <td style="font-family:var(--mono);font-size:12px;">${m.total}</td>
+              <td style="color:var(--text2);font-size:12px;">${m.opme}</td>
+              <td style="color:var(--text2);font-size:12px;">${m.semOpme}</td>
+              <td><span style="font-family:var(--mono);font-size:12px;color:${cor};">${m.mediaSla}d</span></td>
+            </tr>`;}).join('')}
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+      <div class="card" style="border-color:rgba(0,230,118,.25);">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--green);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">✓ Mais rápido</div>
+        <div style="font-size:15px;font-weight:600;">${tc(convMaisRapido?.nome||'—')}</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--green);margin:4px 0;">${convMaisRapido?.mediaGeral||'—'}d</div>
+        <div style="font-size:12px;color:var(--text2);">${convMaisRapido?.total||0} pedidos no período</div>
+      </div>
+      <div class="card" style="border-color:rgba(255,23,68,.25);">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--red);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">⚠ Mais demorado</div>
+        <div style="font-size:15px;font-weight:600;">${tc(convMaisDemorado?.nome||'—')}</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--red);margin:4px 0;">${convMaisDemorado?.mediaGeral||'—'}d</div>
+        <div style="font-size:12px;color:var(--text2);">${convMaisDemorado?.total||0} pedidos no período</div>
+      </div>
+      <div class="card" style="border-color:rgba(0,229,255,.25);">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--cyan);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">⭐ Melhor parceiro</div>
+        <div style="font-size:15px;font-weight:600;">${tc(melhorParceiro?.nome||'—')}</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--cyan);margin:4px 0;">${melhorParceiro?.mediaGeral||'—'}d</div>
+        <div style="font-size:12px;color:var(--text2);">volume + agilidade combinados</div>
+      </div>
+    </div>
+  `;
+  toast(`Análise de ${total} registros concluída`, 'green');
+  sndSuccess();
+};
+
+window.exportarRelatorioPDF = function(){
+  const d = window._relDados;
+  if(!d){ toast('Gere o relatório primeiro','amber'); return; }
+  resumeAC(); sndSuccess();
+
+  const {registros,convList,medList,insights,slaGeral,slaOpme,slaSemOpme,taxaAut,total,fmtPer,melhorParceiro,convMaisRapido,convMaisDemorado,medMaisEnvia,medMaisDemora} = d;
+  const comOpme=registros.filter(r=>r.opme==='Sim').length;
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    @page{size:A4 portrait;margin:0;}
+    *{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif;}
+    body{background:#fff;color:#1A1A1A;width:595pt;}
+    .page{width:595pt;min-height:842pt;padding:32pt 36pt;position:relative;}
+    .header{background:#080C14;padding:20pt 24pt;margin:-32pt -36pt 24pt;display:flex;align-items:center;justify-content:space-between;}
+    .header-title{font-size:18pt;font-weight:700;color:#00E5FF;letter-spacing:.04em;}
+    .header-sub{font-size:9pt;color:rgba(255,255,255,.6);margin-top:3pt;}
+    .header-right{text-align:right;font-size:8pt;color:rgba(255,255,255,.5);}
+    .section{margin-bottom:20pt;}
+    .section-title{font-size:8pt;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#00A0B0;border-bottom:1pt solid #E0E0E0;padding-bottom:5pt;margin-bottom:10pt;}
+    .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:6pt;margin-bottom:18pt;}
+    .kpi{background:#F7F8FA;border:0.5pt solid #E0E0E0;border-radius:6pt;padding:8pt 6pt;text-align:center;}
+    .kpi-num{font-size:16pt;font-weight:700;color:#1565C0;}
+    .kpi-lbl{font-size:6.5pt;color:#666;margin-top:2pt;letter-spacing:.03em;}
+    table{width:100%;border-collapse:collapse;font-size:8pt;}
+    th{background:#F0F4F8;padding:5pt 6pt;text-align:left;font-weight:700;font-size:7pt;letter-spacing:.06em;color:#444;border-bottom:1pt solid #CCC;}
+    td{padding:5pt 6pt;border-bottom:0.5pt solid #EEE;vertical-align:middle;}
+    .insight{display:flex;gap:8pt;align-items:flex-start;padding:7pt 0;border-bottom:0.5pt solid #EEE;}
+    .ins-bar{width:3pt;min-height:28pt;border-radius:2pt;flex-shrink:0;}
+    .ins-txt{font-size:8pt;color:#333;line-height:1.5;}
+    .highlight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8pt;margin-top:10pt;}
+    .hl{border:0.5pt solid #DDD;border-radius:6pt;padding:10pt;}
+    .hl-lbl{font-size:6.5pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4pt;}
+    .hl-name{font-size:10pt;font-weight:700;}
+    .hl-num{font-size:18pt;font-weight:700;margin:2pt 0;}
+    .hl-sub{font-size:7pt;color:#666;}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12pt;}
+    .rodape{position:absolute;bottom:14pt;left:36pt;right:36pt;font-size:7pt;color:#999;display:flex;justify-content:space-between;border-top:0.5pt solid #EEE;padding-top:6pt;}
+    @media print{.no-print{display:none}}
+  </style></head><body>
+  <div class="page">
+    <div class="header">
+      <div><div class="header-title">AUTHSYS — Relatório Estratégico</div><div class="header-sub">Hospital Regina · Setor de Autorizações · Período: ${fmtPer}</div></div>
+      <div class="header-right">Gerado em ${new Date().toLocaleDateString('pt-BR')}<br>${new Date().toLocaleTimeString('pt-BR')}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Visão geral do período</div>
+      <div class="kpis">
+        <div class="kpi"><div class="kpi-num">${total}</div><div class="kpi-lbl">Total pedidos</div></div>
+        <div class="kpi"><div class="kpi-num">${comOpme}</div><div class="kpi-lbl">Com OPME</div></div>
+        <div class="kpi"><div class="kpi-num">${total-comOpme}</div><div class="kpi-lbl">Sem OPME</div></div>
+        <div class="kpi"><div class="kpi-num" style="color:${taxaAut>=60?'#2E7D32':'#C62828'}">${taxaAut}%</div><div class="kpi-lbl">Taxa autorização</div></div>
+        <div class="kpi"><div class="kpi-num" style="color:#E65100">${slaGeral}d</div><div class="kpi-lbl">SLA médio geral</div></div>
+        <div class="kpi"><div class="kpi-num" style="color:#C62828">${slaOpme}d</div><div class="kpi-lbl">SLA c/ OPME</div></div>
+        <div class="kpi"><div class="kpi-num" style="color:#2E7D32">${slaSemOpme}d</div><div class="kpi-lbl">SLA s/ OPME</div></div>
+      </div>
+    </div>
+
+    ${insights.length?`<div class="section">
+      <div class="section-title">⚡ Insights estratégicos</div>
+      ${insights.map(i=>`<div class="insight"><div class="ins-bar" style="background:${i.cor}"></div><div class="ins-txt">${i.txt.replace(/<b>/g,'<b>').replace(/<\/b>/g,'</b>')}</div></div>`).join('')}
+    </div>`:''}
+
+    <div class="section">
+      <div class="section-title">Operadoras de convênio</div>
+      <div class="highlight-grid" style="margin-bottom:10pt;">
+        <div class="hl" style="border-color:#C8E6C9;"><div class="hl-lbl" style="color:#2E7D32;">✓ Mais rápido</div><div class="hl-name">${tc(convMaisRapido?.nome||'—')}</div><div class="hl-num" style="color:#2E7D32;">${convMaisRapido?.mediaGeral||'—'} dias</div><div class="hl-sub">${convMaisRapido?.total||0} pedidos no período</div></div>
+        <div class="hl" style="border-color:#FFCDD2;"><div class="hl-lbl" style="color:#C62828;">⚠ Mais demorado</div><div class="hl-name">${tc(convMaisDemorado?.nome||'—')}</div><div class="hl-num" style="color:#C62828;">${convMaisDemorado?.mediaGeral||'—'} dias</div><div class="hl-sub">${convMaisDemorado?.total||0} pedidos no período</div></div>
+        <div class="hl" style="border-color:#B3E5FC;"><div class="hl-lbl" style="color:#0277BD;">⭐ Melhor parceiro</div><div class="hl-name">${tc(melhorParceiro?.nome||'—')}</div><div class="hl-num" style="color:#0277BD;">${melhorParceiro?.mediaGeral||'—'} dias</div><div class="hl-sub">volume + agilidade combinados</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Convênio</th><th>Pedidos</th><th>SLA geral</th><th>SLA c/ OPME</th><th>SLA s/ OPME</th></tr></thead>
+        <tbody>${convList.slice(0,10).map(c=>`<tr>
+          <td style="font-weight:700">${tc(c.nome)}</td>
+          <td>${c.total}</td>
+          <td style="color:${c.mediaGeral<=slaGeral?'#2E7D32':c.mediaGeral<=slaGeral*1.3?'#E65100':'#C62828'};font-weight:700;">${c.mediaGeral}d</td>
+          <td>${c.mediaOpme||'—'}d</td>
+          <td>${c.mediaSemOpme||'—'}d</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Médicos solicitantes</div>
+      <table>
+        <thead><tr><th>Médico</th><th>Total pedidos</th><th>Com OPME</th><th>Sem OPME</th><th>SLA médio</th></tr></thead>
+        <tbody>${medList.slice(0,10).map(m=>`<tr>
+          <td style="font-weight:700">${tc(m.nome)}</td>
+          <td>${m.total}</td>
+          <td>${m.opme}</td>
+          <td>${m.semOpme}</td>
+          <td style="color:${m.mediaSla<=slaGeral?'#2E7D32':m.mediaSla<=slaGeral*1.3?'#E65100':'#C62828'};font-weight:700;">${m.mediaSla}d</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>
+
+    <div class="rodape">
+      <span>AUTHSYS · Hospital Regina · Setor de Autorizações</span>
+      <span>Relatório gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')} · ${total} registros analisados</span>
+    </div>
+  </div>
+  <div class="no-print" style="text-align:center;padding:20px;">
+    <button onclick="window.print()" style="padding:10px 28px;background:#080C14;color:#00E5FF;border:1px solid #00E5FF;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;">🖨 Imprimir / Salvar PDF</button>
+  </div>
+  </body></html>`;
+
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  toast('Relatório PDF gerado','cyan');
+};
+
+// ── Radar de Riscos ───────────────────────────────────────────────────────────
+const SEMANA_ATUAL = new Date().toISOString().substring(0,10);
+
+// Calcula SLA médio histórico de um convênio ou médico a partir do Firestore
+async function slaHistorico(campo, valor){
+  try{
+    const snap = await getDocs(query(collection(db,'historico'),where(campo,'==',valor)));
+    const slas=[];
+    snap.forEach(d=>{ const r=d.data(); if(r.slaDias>0) slas.push(r.slaDias); });
+    if(!slas.length) return null;
+    // IQR para remover outliers
+    const s=[...slas].sort((a,b)=>a-b);
+    const q1=s[Math.floor(s.length*0.25)], q3=s[Math.floor(s.length*0.75)];
+    const iqr=q3-q1, lo=q1-1.5*iqr, hi=q3+1.5*iqr;
+    const limpos=s.filter(v=>v>=lo&&v<=hi);
+    return Math.round(limpos.reduce((a,b)=>a+b,0)/limpos.length);
+  } catch(e){ return null; }
 }
 
-function buildBody(p,el){
-  if(el.dataset.built)return;
-  el.dataset.built='1';
+// Score de risco 0-100
+function calcScore(slaMedioConv, slaMedioMed, slaDias, diasRestantes){
+  let score=0;
+  const slaRef = 15; // baseline
+  if(slaMedioConv!=null && slaMedioConv>slaRef) score += Math.min(40, (slaMedioConv-slaRef)*2);
+  if(slaMedioMed!=null  && slaMedioMed>slaRef)  score += Math.min(20, (slaMedioMed-slaRef));
+  if(diasRestantes!=null){
+    if(diasRestantes<=7)  score += 40;
+    else if(diasRestantes<=15) score += 25;
+    else if(diasRestantes<=30) score += 15;
+    else score += 5;
+  }
+  if(slaDias>20) score += Math.min(20, slaDias-20);
+  return Math.min(100, score);
+}
 
-  /* Info extra */
-  var infoHtml=`<div class="divider-info">
-    <div class="divider-info-item"><div class="label">Médico</div><div class="value">${esc(p.medico||'—')}</div></div>
-    <div class="divider-info-item"><div class="label">CTI</div><div class="value">${p.cti?'Sim':'Não'}</div></div>
-    <div class="divider-info-item"><div class="label">Internado</div><div class="value">${p.internado?'Sim':'Não'}</div></div>
-    ${p.observacoes?`<div class="divider-info-item" style="grid-column:1/-1"><div class="label">Obs</div><div class="value" style="font-size:12px;color:var(--text2)">${esc(p.observacoes)}</div></div>`:''}
-  </div>`;
+window.loadRiscos = async function(){
+  const el=document.getElementById('riscos-content');
+  el.innerHTML='<div class="empty"><span class="empty-icon">⏳</span>Calculando scores de risco...</div>';
 
-  /* Procedimentos */
-  var procsHtml='<div style="margin-bottom:12px"><div class="section-label" style="margin-bottom:10px">Procedimentos</div>';
-  (p.procedimentos||[]).forEach(function(pr){
-    procsHtml+=`<div class="proc-item">
-      <div class="proc-code">${esc(pr.codigo||'')}</div>
-      <div class="proc-name">${esc(pr.nome||'')}${pr.principal?'&nbsp;<span style="font-size:10px;background:rgba(108,99,255,0.2);border:1px solid rgba(108,99,255,0.4);color:var(--accent);padding:1px 7px;border-radius:4px;font-weight:600">PRINCIPAL</span>':''}</div>
-      <div class="proc-qty">Solic: ${pr.qtd_solic||1}${pr.qtd_aut!=null?' · Aut: '+pr.qtd_aut:''}</div>
-    </div>`;
-  });
-  procsHtml+='</div>';
-
-  /* OPMEs */
-  var opmeHtml='';
-  if(p.tem_opme&&p.opme&&p.opme.length){
-    opmeHtml='<div class="opme-list"><div class="opme-title">Materiais OPME identificados</div>';
-    p.opme.forEach(function(o){
-      var statusHtml='';
-      if(o.status==='PENDENTE')statusHtml='<span class="opme-pending">⏳ Autorização pendente</span>';
-      else if(o.status==='PARTICULAR')statusHtml='<span class="opme-pending" style="border-color:rgba(108,99,255,0.3);color:var(--accent);background:rgba(108,99,255,0.1)">💳 Material particular</span>';
-      opmeHtml+=`<div class="opme-item">
-        <span class="opme-item-icon">🔩</span>
-        <div>
-          <div class="opme-item-name">${esc(o.nome||'Material OPME')}</div>
-          <div class="opme-item-detail">
-            ${o.fornecedor?'Fornec: '+esc(o.fornecedor)+' &nbsp;·&nbsp; ':''}
-            Qtd sol: ${o.qtd_sol||1}${o.qtd_aut!=null?' · Qtd aut: '+o.qtd_aut:''}
-            ${o.ref?'&nbsp;·&nbsp; Ref: '+esc(o.ref):''}
-          </div>
-          ${statusHtml}
-        </div>
-      </div>`;
-    });
-    opmeHtml+='</div>';
+  if(!allDados.length){
+    el.innerHTML='<div class="empty"><span class="empty-icon">⚡</span>Importe uma planilha para ver o radar.</div>';
+    return;
   }
 
-  el.innerHTML=infoHtml+procsHtml+opmeHtml;
+  // Buscar tratando desta semana do Firebase
+  const snapTrat = await getDocs(query(collection(db,'tratando'),where('semana','==',SEMANA_ATUAL)));
+  const tratandoSet = new Set();
+  snapTrat.forEach(d=>tratandoSet.add(d.id));
+
+  // Filtrar candidatos: sem aut + cirurgia nos próximos 60 dias
+  const H60=addDias(hoje(),60);
+  const candidatos=allDados.filter(d=>
+    d.fase!=='AUTORIZADO' && d.dtAgendada && d.dtAgendada>=hoje() && d.dtAgendada<=H60
+  );
+
+  if(!candidatos.length){
+    el.innerHTML='<div class="empty"><span class="empty-icon">✓</span>Nenhum processo de risco identificado nos próximos 60 dias.</div>';
+    return;
+  }
+
+  // Calcular SLA médio por convênio e médico (do allDados atual como proxy rápido)
+  const slaConvMap={}, slaMedMap={};
+  allDados.forEach(d=>{
+    if(!slaConvMap[d.convenio]) slaConvMap[d.convenio]=[];
+    slaConvMap[d.convenio].push(d.slaDias);
+    if(!slaMedMap[d.medico]) slaMedMap[d.medico]=[];
+    slaMedMap[d.medico].push(d.slaDias);
+  });
+  function mediaLimpa(arr){
+    if(!arr||!arr.length) return null;
+    const s=[...arr].sort((a,b)=>a-b);
+    const q1=s[Math.floor(s.length*.25)],q3=s[Math.floor(s.length*.75)];
+    const iqr=q3-q1,lo=q1-1.5*iqr,hi=q3+1.5*iqr;
+    const l=s.filter(v=>v>=lo&&v<=hi);
+    return l.length?Math.round(l.reduce((a,b)=>a+b,0)/l.length):null;
+  }
+
+  // Montar lista com scores
+  const lista = candidatos.map(d=>{
+    const diasRestantes = d.dtAgendada ? Math.ceil((d.dtAgendada-new Date())/(1000*60*60*24)) : null;
+    const slaMedConv = mediaLimpa(slaConvMap[d.convenio]);
+    const slaMedMed  = mediaLimpa(slaMedMap[d.medico]);
+    const score = calcScore(slaMedConv, slaMedMed, d.slaDias, diasRestantes);
+    const id = slugPac(d.nome)+'_'+SEMANA_ATUAL;
+    return {...d, diasRestantes, slaMedConv, slaMedMed, score, id, tratando: tratandoSet.has(id)};
+  }).sort((a,b)=>b.score-a.score);
+
+  const ativos  = lista.filter(d=>!d.tratando);
+  const tratando= lista.filter(d=>d.tratando);
+
+  function scoreLabel(s){
+    if(s>=70) return {cls:'badge-red',  txt:'Alto risco'};
+    if(s>=40) return {cls:'badge-amber',txt:'Atenção'};
+    return           {cls:'badge-gray', txt:'Monitorar'};
+  }
+  function barColor(s){
+    if(s>=70) return 'var(--red)';
+    if(s>=40) return 'var(--amber)';
+    return 'var(--text3)';
+  }
+
+  function renderCard(d){
+    const sl=scoreLabel(d.score);
+    const urgCls=d.diasRestantes!=null&&d.diasRestantes<=7?'p1':d.diasRestantes!=null&&d.diasRestantes<=30?'p2':'';
+    return `<div class="card" style="padding:16px 20px;margin-bottom:10px;${urgCls==='p1'?'border-color:rgba(255,23,68,.3);':urgCls==='p2'?'border-color:rgba(255,179,0,.25);':''}">
+      <div class="flex" style="margin-bottom:10px;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:15px;font-weight:600;">${tc(d.nome)}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px;">${d.convenio||'—'} · ${tc(d.medico)||'—'}</div>
+        </div>
+        <div class="ml-auto flex" style="gap:8px;align-items:center;">
+          <span class="badge ${sl.cls}" style="font-size:11px;">${sl.txt}</span>
+          ${d.opme==='Sim'?'<span class="badge badge-red">OPME</span>':''}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px;">
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:10px;">
+          <div style="font-size:10px;color:var(--text2);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Cirurgia em</div>
+          <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:${d.diasRestantes!=null&&d.diasRestantes<=7?'var(--red)':d.diasRestantes!=null&&d.diasRestantes<=30?'var(--amber)':'var(--cyan)'};">${d.diasRestantes!=null?d.diasRestantes+'d':'—'}</div>
+          <div style="font-size:11px;color:var(--text2);">${fmtData(d.dtAgendada)}</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:10px;">
+          <div style="font-size:10px;color:var(--text2);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">SLA atual</div>
+          <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:var(--amber);">${d.slaDias}d</div>
+          <div style="font-size:11px;color:var(--text2);">desde o pedido</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:10px;">
+          <div style="font-size:10px;color:var(--text2);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">SLA médio convênio</div>
+          <div style="font-size:18px;font-weight:700;font-family:var(--mono);color:${d.slaMedConv!=null&&d.slaMedConv>15?'var(--red)':'var(--green)'};">${d.slaMedConv!=null?d.slaMedConv+'d':'—'}</div>
+          <div style="font-size:11px;color:var(--text2);">${d.convenio||'—'}</div>
+        </div>
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:10px;">
+          <div style="font-size:10px;color:var(--text2);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Fase atual</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-top:4px;">${d.fase}</div>
+          <div style="font-size:11px;color:var(--text2);">pedido ${fmtData(d.dtPedido)}</div>
+        </div>
+      </div>
+
+      <!-- Barra de score -->
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:10px;color:var(--text2);font-family:var(--mono);">SCORE DE RISCO</span>
+          <span style="font-size:10px;font-family:var(--mono);color:${barColor(d.score)};font-weight:700;">${d.score}/100</span>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:999px;overflow:hidden;">
+          <div style="height:100%;width:${d.score}%;background:${barColor(d.score)};box-shadow:0 0 8px ${barColor(d.score)};border-radius:999px;transition:width .6s ease;"></div>
+        </div>
+      </div>
+
+      <!-- Ações -->
+      <div class="flex" style="gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="font-size:12px;padding:7px 14px;" onclick="marcarTratando('${d.id}','${d.nome.replace(/'/g,"\\'")}')">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><polyline points="20 6 9 17 4 12"/></svg>
+          Estou tratando
+        </button>
+        <button class="btn btn-red" style="font-size:12px;padding:7px 14px;" onclick="enviarAlertaRisco('${d.nome.replace(/'/g,"\\'")}','${(d.convenio||'').replace(/'/g,"\\'")}','${(d.medico||'').replace(/'/g,"\\'")}',${d.diasRestantes??0},${d.slaDias},${d.score},'${d.fase}')">
+          <svg viewBox="0 0 24 24" style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Enviar alerta
+        </button>
+        <div style="margin-left:auto;font-size:11px;color:var(--text3);font-family:var(--mono);align-self:center;">
+          ${d.diasRestantes!=null&&d.diasRestantes<=7?'⚠ CIRURGIA ESTA SEMANA':d.diasRestantes!=null&&d.diasRestantes<=14?'Cirurgia em 2 semanas':''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  let html='';
+
+  if(ativos.length){
+    html+=`<div style="font-size:10px;font-family:var(--mono);color:var(--red);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;opacity:.8;">${ativos.length} processo${ativos.length>1?'s':''} no radar</div>`;
+    html+=ativos.map(renderCard).join('');
+  }
+
+  if(tratando.length){
+    html+=`<hr class="divider">
+      <div style="font-size:10px;font-family:var(--mono);color:var(--green);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;opacity:.8;">✓ Estou tratando (${tratando.length}) — some na próxima importação</div>`;
+    html+=tratando.map(d=>`
+      <div class="card" style="padding:12px 18px;margin-bottom:8px;opacity:.6;display:flex;align-items:center;gap:12px;">
+        <span class="badge badge-green">Tratando</span>
+        <span style="font-size:13px;font-weight:600;">${tc(d.nome)}</span>
+        <span style="font-size:12px;color:var(--text2);">${d.convenio||'—'} · cirurgia em ${d.diasRestantes!=null?d.diasRestantes+'d':'—'}</span>
+        <button class="btn btn-outline ml-auto" style="font-size:11px;padding:5px 12px;" onclick="desmarcarTratando('${d.id}')">Recolocar no radar</button>
+      </div>`).join('');
+  }
+
+  if(!lista.length) html='<div class="empty"><span class="empty-icon">✓</span>Nenhum processo de risco identificado.</div>';
+  el.innerHTML=html;
+};
+
+window.marcarTratando = async function(id, nome){
+  resumeAC(); sndClick();
+  try{
+    await setDoc(doc(db,'tratando',id),{
+      semana:SEMANA_ATUAL, paciente:nome, marcadoEm:Timestamp.now()
+    });
+    toast(`"${tc(nome)}" marcado como tratando`, 'green');
+    loadRiscos();
+  } catch(e){ toast('Erro ao salvar','red'); }
+};
+
+window.desmarcarTratando = async function(id){
+  resumeAC(); sndClick();
+  try{
+    await deleteDoc(doc(db,'tratando',id));
+    toast('Recolocado no radar','amber');
+    loadRiscos();
+  } catch(e){ toast('Erro','red'); }
+};
+
+window.enviarAlertaRisco = async function(nome, convenio, medico, diasRestantes, slaDias, score, fase){
+  resumeAC(); sndClick();
+  const corpo=`AUTHSYS · Alerta de risco — ${new Date().toLocaleDateString('pt-BR')}
+
+⚠ PROCESSO EM RISCO DE PERDER PRAZO
+
+Paciente:    ${tc(nome)}
+Convênio:    ${convenio||'—'}
+Médico:      ${tc(medico)||'—'}
+Fase atual:  ${fase}
+Cirurgia em: ${diasRestantes} dias
+SLA atual:   ${slaDias} dias desde o pedido
+Score risco: ${score}/100
+
+Este processo tem histórico de convênio/médico com atraso e a cirurgia está próxima sem autorização confirmada.
+
+Acesse o AUTHSYS para verificar e tratar.`;
+
+  try{
+    await emailjs.send('service_ol3swio','template_9k4k225',{
+      to_email:'atos.freitas@hospitalregina.com.br',
+      subject:`⚠ AUTHSYS · Risco de prazo — ${tc(nome)} · cirurgia em ${diasRestantes}d`,
+      message: corpo,
+    });
+    toast('Alerta enviado por email','green');
+  } catch(e){
+    // EmailJS não configurado — mostrar o conteúdo para copiar
+    const win=window.open('','_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:monospace;padding:32px;background:#080C14;color:#E8F0FE;white-space:pre-wrap;font-size:14px;line-height:1.7;}</style></head><body>${corpo}\n\n---\nEnvie para: atos.freitas@hospitalregina.com.br\n\n(Configure o EmailJS para envio automático)</body></html>`);
+    toast('EmailJS não configurado — conteúdo aberto em nova aba','amber');
+  }
+};
+async function enviarEmailAlertas(){
+  if(!allDados.length) return;
+  const amanha    = addDias(hoje(),1);
+  const amanhaKey = amanha.toISOString().substring(0,10);
+  const ciruAmanha= allDados.filter(d=>d.dtAgendada&&d.dtAgendada.toISOString().substring(0,10)===amanhaKey);
+  const pendAmanha= ciruAmanha.filter(d=>d.prio<=2);
+  const slaAlto   = allDados.filter(d=>d.slaDias>=30&&d.fase!=='AUTORIZADO');
+  const venc      = verificarVencimentos();
+  if(!pendAmanha.length && !slaAlto.length && !venc.length) return;
+  const linhasPend = pendAmanha.map(d=>`\u2022 ${tc(d.nome)} \u2014 ${d.convenio||'\u2014'} \u2014 ${d.opme==='Sim'?'COM OPME':''}`).join('\n');
+  const linhasSla  = slaAlto.slice(0,10).map(d=>`\u2022 ${tc(d.nome)} \u2014 ${d.fase} \u2014 ${d.slaDias} dias \u2014 ${d.convenio||'\u2014'}`).join('\n');
+  const linhasVenc = venc.map(v=>`\u2022 ${tc(v.nome)} \u2014 ${v.convenio||'\u2014'} \u2014 ${v.urgencia==='vencido'?'VENCIDA ha '+Math.abs(v.diasRestantes)+'d':'vence em '+v.diasRestantes+'d'}`).join('\n');
+  const corpo=`AUTHSYS - Alertas do dia ${new Date().toLocaleDateString('pt-BR')}
+
+${pendAmanha.length?'CIRURGIAS AMANHA SEM AUTORIZACAO ('+pendAmanha.length+'):\n'+linhasPend+'\n':''}
+${slaAlto.length?'PROCESSOS COM SLA ACIMA DE 30 DIAS ('+slaAlto.length+'):\n'+linhasSla+'\n':''}
+${venc.length?'AUTORIZACOES PROXIMAS DO VENCIMENTO ('+venc.length+'):\n'+linhasVenc+'\n':''}
+Acesse o sistema para mais detalhes.`;
+  const subjects=[];
+  if(pendAmanha.length) subjects.push(`${pendAmanha.length} cirurgia${pendAmanha.length!==1?'s':''} amanha sem autorizacao`);
+  if(venc.length) subjects.push(`${venc.length} autorizacao(oes) vencendo`);
+  if(slaAlto.length) subjects.push(`${slaAlto.length} SLAs altos`);
+  try{
+    await emailjs.send('service_ol3swio','template_9k4k225',{
+      to_email:'atos.freitas@hospitalregina.com.br',
+      subject:`AUTHSYS - ${subjects.join(' - ')}`,
+      message: corpo,
+    });
+    toast('Email de alertas enviado','green');
+  } catch(e){ console.warn('EmailJS erro:', e); }
 }
 
-function esc(s){
-  if(!s)return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// CONFIG & APRENDIZADO
+const PRAZO_PADRAO = 30;
+let prazosConvenio = {};
+let slaAprendido   = {};
+
+window.loadConfig = async function(){
+  try{
+    const snap = await getDocs(collection(db,'config_convenios'));
+    prazosConvenio = {};
+    snap.forEach(d=>{ prazosConvenio[d.id] = d.data().dias; });
+  } catch(e){}
+  await calcularAprendizado();
+  renderConfigConvenios();
+};
+
+window.calcularAprendizado = async function(){
+  const el=document.getElementById('config-aprendizado');
+  if(el) el.innerHTML='<div class="empty" style="padding:16px;">Calculando...</div>';
+  try{
+    const snap = await getDocs(collection(db,'historico'));
+    const porConv={};
+    snap.forEach(d=>{
+      const r=d.data();
+      const c=(r.convenio||'Nao informado').trim();
+      if(!porConv[c]) porConv[c]=[];
+      if(r.slaDias>0) porConv[c].push(r.slaDias);
+    });
+    allDados.forEach(d=>{
+      const c=(d.convenio||'Nao informado').trim();
+      if(!porConv[c]) porConv[c]=[];
+      if(d.slaDias>0) porConv[c].push(d.slaDias);
+    });
+    slaAprendido={};
+    for(const [conv,slas] of Object.entries(porConv)){
+      if(!slas.length) continue;
+      const s=[...slas].sort((a,b)=>a-b);
+      const q1=s[Math.floor(s.length*.25)],q3=s[Math.floor(s.length*.75)];
+      const iqr=q3-q1,lo=q1-1.5*iqr,hi=q3+1.5*iqr;
+      const limpos=s.filter(v=>v>=lo&&v<=hi);
+      const arr=limpos.length?limpos:s;
+      const media=Math.round(arr.reduce((a,b)=>a+b,0)/arr.length);
+      slaAprendido[conv]={media,amostras:slas.length,limpos:limpos.length,
+        max:Math.max(...arr),min:Math.min(...arr),outliers:slas.length-limpos.length};
+      await setDoc(doc(db,'sla_aprendido',slugPac(conv)),
+        {convenio:conv,...slaAprendido[conv],atualizadoEm:Timestamp.now()});
+    }
+    renderAprendizado();
+    toast('Aprendizado recalculado','green');
+  } catch(e){ if(el) el.innerHTML=`<div class="empty">Erro: ${e.message}</div>`; }
+};
+
+function renderAprendizado(){
+  const el=document.getElementById('config-aprendizado');
+  if(!el) return;
+  const lista=Object.entries(slaAprendido).sort((a,b)=>b[1].media-a[1].media);
+  if(!lista.length){el.innerHTML='<div class="empty" style="padding:16px;">Sem dados ainda.</div>';return;}
+  const slaGeral=Math.round(lista.reduce((s,[,d])=>s+d.media,0)/lista.length);
+  let html=`<div style="font-size:11px;color:var(--text2);margin-bottom:12px;font-family:var(--mono);">Media geral: <span style="color:var(--cyan);font-weight:700;">${slaGeral} dias</span> &middot; ${lista.length} convenios analisados</div>
+  <div class="tbl-wrap"><table>
+  <thead><tr><th>Convenio</th><th>SLA medio real</th><th>Min</th><th>Max</th><th>Amostras</th><th>Outliers</th><th>Vs. media</th></tr></thead><tbody>`;
+  lista.forEach(([conv,d])=>{
+    const diff=d.media-slaGeral;
+    const cor=d.media<=slaGeral?'var(--green)':d.media<=slaGeral*1.3?'var(--amber)':'var(--red)';
+    html+=`<tr><td style="font-weight:600;">${tc(conv)}</td>
+      <td><span style="font-family:var(--mono);font-weight:700;color:${cor};">${d.media}d</span></td>
+      <td style="color:var(--text2);font-family:var(--mono);">${d.min}d</td>
+      <td style="color:var(--text2);font-family:var(--mono);">${d.max}d</td>
+      <td style="color:var(--text2);">${d.amostras}</td>
+      <td style="color:var(--text3);">${d.outliers}</td>
+      <td><span class="badge ${diff>0?'badge-red':diff<0?'badge-green':'badge-gray'}">${diff>0?'+':''}${diff}d</span></td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  el.innerHTML=html;
 }
+
+function renderConfigConvenios(){
+  const el=document.getElementById('config-convenios');
+  if(!el) return;
+  const convs=new Set([...Object.keys(prazosConvenio),...allDados.map(d=>d.convenio).filter(Boolean)]);
+  if(!convs.size){el.innerHTML='<div class="empty" style="padding:16px;">Importe uma planilha para ver os convenios.</div>';return;}
+  let html=`<div class="tbl-wrap"><table>
+    <thead><tr><th>Convenio</th><th>SLA medio real</th><th>Prazo vencimento (dias)</th><th></th></tr></thead><tbody>`;
+  [...convs].sort().forEach(conv=>{
+    const prazo=prazosConvenio[conv]??PRAZO_PADRAO;
+    const apren=slaAprendido[conv];
+    const sid='prazo-'+slugPac(conv);
+    html+=`<tr>
+      <td style="font-weight:600;">${tc(conv)}</td>
+      <td>${apren?`<span style="font-family:var(--mono);color:var(--cyan);">${apren.media}d</span> <span style="font-size:11px;color:var(--text2);">(${apren.amostras} amostras)</span>`:'<span style="color:var(--text3);">sem dados</span>'}</td>
+      <td><input type="number" value="${prazo}" min="1" max="365" id="${sid}"
+        style="width:80px;padding:4px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:13px;"></td>
+      <td><button class="btn btn-outline" style="padding:4px 12px;font-size:12px;" onclick="salvarPrazoNome('${conv.replace(/'/g,"\\'")}')">Salvar</button></td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  el.innerHTML=html;
+}
+
+window.salvarPrazoNome = async function(conv){
+  const input=document.getElementById('prazo-'+slugPac(conv));
+  if(!input) return;
+  const dias=parseInt(input.value)||PRAZO_PADRAO;
+  try{
+    await setDoc(doc(db,'config_convenios',conv),{convenio:conv,dias,atualizadoEm:Timestamp.now()});
+    prazosConvenio[conv]=dias;
+    toast(tc(conv)+': '+dias+' dias salvo','green'); sndSuccess();
+  } catch(e){ toast('Erro ao salvar','red'); }
+};
+
+window.salvarPrazoConvenio = async function(){
+  const nome=document.getElementById('cfg-conv-nome').value.trim();
+  const dias=parseInt(document.getElementById('cfg-conv-dias').value)||PRAZO_PADRAO;
+  if(!nome){ toast('Informe o nome do convenio','amber'); return; }
+  try{
+    await setDoc(doc(db,'config_convenios',nome),{convenio:nome,dias,atualizadoEm:Timestamp.now()});
+    prazosConvenio[nome]=dias;
+    document.getElementById('cfg-conv-nome').value='';
+    document.getElementById('cfg-conv-dias').value='30';
+    toast(tc(nome)+': '+dias+' dias salvo','green'); sndSuccess();
+    renderConfigConvenios();
+  } catch(e){ toast('Erro ao salvar','red'); }
+};
+
+// VENCIMENTO
+function verificarVencimentos(){
+  if(!allDados.length) return [];
+  return allDados
+    .filter(d=>d.fase==='AUTORIZADO'&&d.dtFase)
+    .map(d=>{
+      const prazo=prazosConvenio[d.convenio]??PRAZO_PADRAO;
+      const diasAut=d.diasAutorizado??0;
+      const diasRestantes=prazo-diasAut;
+      return {...d,prazo,diasAut,diasRestantes,
+        urgencia:diasRestantes<0?'vencido':diasRestantes<=7?'vencendo':null};
+    })
+    .filter(d=>d.urgencia)
+    .sort((a,b)=>a.diasRestantes-b.diasRestantes);
+}
+
+const _origLoadAgenda=window.loadAgenda;
+window.loadAgenda=function(){
+  _origLoadAgenda();
+  setTimeout(()=>{
+    const venc=verificarVencimentos();
+    if(!venc.length) return;
+    const el=document.getElementById('agenda-content');
+    if(!el) return;
+    const vencidos=venc.filter(v=>v.urgencia==='vencido');
+    const vencendo=venc.filter(v=>v.urgencia==='vencendo');
+    const banner=document.createElement('div');
+    banner.style.cssText='background:rgba(255,23,68,.07);border:1px solid rgba(255,23,68,.3);border-radius:14px;padding:14px 20px;margin-bottom:16px;';
+    banner.innerHTML=`<div style="font-size:13px;font-weight:600;color:var(--red);margin-bottom:8px;">Autorizacoes proximas do vencimento (${venc.length})</div>
+      ${vencidos.length?`<div style="font-size:12px;color:var(--text2);margin-bottom:6px;"><b style="color:var(--red)">${vencidos.length} vencida${vencidos.length>1?'s':''}</b></div>`:''}
+      ${vencendo.length?`<div style="font-size:12px;color:var(--text2);margin-bottom:10px;"><b style="color:var(--amber)">${vencendo.length} vencendo em ate 7 dias</b></div>`:''}
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${venc.slice(0,6).map(v=>`<div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${v.urgencia==='vencido'?'var(--red)':'var(--amber)'};border-radius:var(--radius);padding:8px 12px;font-size:12px;cursor:pointer;" onclick="abrirModal(${esc(v)})">
+            <span style="font-weight:600;">${tc(v.nome)}</span>
+            <span style="color:${v.urgencia==='vencido'?'var(--red)':'var(--amber)'};margin-left:8px;">${v.urgencia==='vencido'?'venceu ha '+Math.abs(v.diasRestantes)+'d':'vence em '+v.diasRestantes+'d'}</span>
+            <span style="color:var(--text3);margin-left:6px;font-size:11px;">${v.convenio||''} prazo ${v.prazo}d</span>
+          </div>`).join('')}
+      </div>`;
+    el.insertBefore(banner,el.firstChild);
+  },150);
+};
+
+document.addEventListener('click', resumeAC, {once:true});
+// Só carrega agenda na inicialização — não toca no Firebase até o usuário importar
+window.loadAgenda();
 </script>
 </body>
 </html>
